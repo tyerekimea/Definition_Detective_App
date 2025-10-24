@@ -16,7 +16,7 @@ export default function LeaderboardPage() {
   const { user: currentUser } = useUser();
   
   const usersCollectionRef = useMemoFirebase(() => 
-    query(collection(firestore, "users"), orderBy("totalScore", "desc"))
+    query(collection(firestore, "userProfiles"), orderBy("totalScore", "desc"))
   , [firestore]);
 
   const { data: leaderboardData, isLoading } = useCollection<UserProfile>(usersCollectionRef);

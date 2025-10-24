@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useTransition } from "react";
@@ -131,7 +130,7 @@ export default function GameClient() {
 
   const updateFirestoreUser = useCallback(async (scoreGained: number, newLevel: number) => {
     if (user && firestore) {
-        const userRef = doc(firestore, "users", user.uid);
+        const userRef = doc(firestore, "userProfiles", user.uid);
         const updateData = {
             totalScore: increment(scoreGained),
             highestLevel: newLevel,
@@ -150,12 +149,12 @@ export default function GameClient() {
     }
 }, [user, firestore]);
 
-  useEffect(() => {
-    if (!wordData) return;
+useEffect(() => {
+    if (!wordData || gameState !== "playing") return;
 
     const isWon = wordData.word.split('').every(char => guessedLetters.correct.includes(char.toLowerCase()));
     
-    if (isWon && gameState === "playing") {
+    if (isWon) {
       setGameState("won");
       if (sounds.win) playSound(sounds.win);
       
@@ -171,10 +170,10 @@ export default function GameClient() {
         startNewGame(newLevel);
       }, 2000);
 
-    } else if (guessedLetters.incorrect.length >= MAX_INCORRECT_TRIES && gameState === "playing") {
+    } else if (guessedLetters.incorrect.length >= MAX_INCORRECT_TRIES) {
       setGameState("lost");
     }
-  }, [guessedLetters, wordData, level, score, sounds, playSound, startNewGame, updateFirestoreUser, gameState]);
+  }, [guessedLetters, wordData, level, sounds, playSound, startNewGame, updateFirestoreUser, gameState]);
 
 
   const incorrectTriesLeft = MAX_INCORRECT_TRIES - guessedLetters.incorrect.length;
@@ -219,7 +218,7 @@ export default function GameClient() {
           </AlertDescription>
           {gameState === 'lost' && (
              <div className="mt-4 flex justify-center gap-4">
-                <Button onClick={() => { setLevel(1); setScore(0); }}>
+                <Button onClick={() => { setLevel(1); setScore(0); startNewGame(1); }}>
                     <RotateCw className="mr-2 h-4 w-4" /> Start Over
                 </Button>
             </div>

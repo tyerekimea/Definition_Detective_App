@@ -1,0 +1,142 @@
+"use client";
+
+import { useState } from "react";
+import { useAuth } from "@/hooks/use-auth";
+import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
+import { doc, updateDoc, arrayUnion } from "firebase/firestore";
+import type { UserProfile } from "@/lib/firebase-types";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Paintbrush, Lightbulb, CheckCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
+import { Skeleton } from "@/components/ui/skeleton";
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError } from "@/firebase/errors";
+
+const themes = [
+  { id: "noir", name: "Film Noir", description: "A classic black and white detective look." },
+  { id: "cyberpunk", name: "Cyberpunk", description: "A neon-lit futuristic theme." },
+];
+
+const hintPacks = [
+    { id: "small_hints", name: "5 Hint Pack", amount: 5, description: "A few hints to get you unstuck." },
+    { id: "large_hints", name: "25 Hint Pack", amount: 25, description: "Enough hints for the toughest cases." },
+];
+
+
+export default function StorePage() {
+  const { user, loading: authLoading } = useAuth();
+  const firestore = useFirestore();
+  const { toast } = useToast();
+  const router = useRouter();
+
+  const userProfileRef = useMemoFirebase(() => 
+    user ? doc(firestore, "userProfiles", user.uid) : null
+  , [firestore, user]);
+
+  const { data: userProfile, isLoading: profileLoading } = useDoc<UserProfile>(userProfileRef);
+
+  if (!authLoading && !user) {
+    router.push("/login");
+    return null;
+  }
+  
+  const handlePurchaseTheme = async (themeId: string) => {
+    if (!userProfileRef) return;
+    toast({ title: "Purchase Successful!", description: `You've unlocked the ${themes.find(t=>t.id === themeId)?.name} theme.` });
+    
+    updateDoc(userProfileRef, {
+        purchasedThemes: arrayUnion(themeId)
+    }).catch((serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: userProfileRef.path,
+            operation: 'update',
+            requestResourceData: { purchasedThemes: arrayUnion(themeId) },
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+  };
+
+  const handlePurchaseHints = async (packId: string, amount: number) => {
+    // In a real app, you would add the hints to the user's profile.
+    // For this simulation, we'll just show a toast.
+    toast({ title: "Purchase Successful!", description: `You've received ${amount} hints.` });
+  };
+  
+  const loading = authLoading || profileLoading;
+
+  if (loading) {
+    return (
+        <div className="container mx-auto py-8">
+            <div className="text-center mb-8">
+                <h1 className="text-4xl font-bold font-headline">Store</h1>
+                <p className="text-muted-foreground mt-2">Purchase items to help your detective work.</p>
+            </div>
+            <div className="grid md:grid-cols-2 gap-8">
+                <div>
+                    <h2 className="text-2xl font-bold mb-4 flex items-center gap-2"><Paintbrush /> Cosmetic Themes</h2>
+                    <div className="space-y-4">
+                        {themes.map(theme => ( <Skeleton key={theme.id} className="h-40 w-full" /> ))}
+                    </div>
+                </div>
+                <div>
+                    <h2 className="text-2xl font-bold mb-4 flex items-center gap-2"><Lightbulb /> Hint Packs</h2>
+                    <div className="space-y-4">
+                        {hintPacks.map(pack => ( <Skeleton key={pack.id} className="h-40 w-full" /> ))}
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+  }
+
+  return (
+    <div className="container mx-auto py-8">
+      <div className="text-center mb-8">
+        <h1 className="text-4xl font-bold font-headline">Store</h1>
+        <p className="text-muted-foreground mt-2">Purchase items to help your detective work.</p>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-8">
+        <div>
+          <h2 className="text-2xl font-bold mb-4 flex items-center gap-2"><Paintbrush /> Cosmetic Themes</h2>
+          <div className="space-y-4">
+            {themes.map(theme => {
+                const isPurchased = userProfile?.purchasedThemes?.includes(theme.id);
+                return (
+                    <Card key={theme.id}>
+                        <CardHeader>
+                        <CardTitle>{theme.name}</CardTitle>
+                        <CardDescription>{theme.description}</CardDescription>
+                        </CardHeader>
+                        <CardFooter>
+                        <Button onClick={() => handlePurchaseTheme(theme.id)} disabled={isPurchased}>
+                            {isPurchased ? <><CheckCircle className="mr-2 h-4 w-4" /> Purchased</> : "Purchase"}
+                        </Button>
+                        </CardFooter>
+                    </Card>
+                )
+            })}
+          </div>
+        </div>
+        <div>
+          <h2 className="text-2xl font-bold mb-4 flex items-center gap-2"><Lightbulb /> Hint Packs</h2>
+          <div className="space-y-4">
+             {hintPacks.map(pack => (
+                <Card key={pack.id}>
+                    <CardHeader>
+                    <CardTitle>{pack.name}</CardTitle>
+                    <CardDescription>{pack.description}</CardDescription>
+                    </CardHeader>
+                    <CardFooter>
+                    <Button onClick={() => handlePurchaseHints(pack.id, pack.amount)}>Purchase</Button>
+                    </CardFooter>
+                </Card>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

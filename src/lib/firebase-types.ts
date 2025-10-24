@@ -7,6 +7,7 @@ export type UserProfile = {
     rank: string;
     createdAt: string;
     updatedAt: string;
+    purchasedThemes?: string[];
 };
 
 export type GameSession = {

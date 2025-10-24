@@ -11,15 +11,14 @@ import { getHintAction } from "@/lib/actions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 
-type GameState = "difficulty-select" | "playing" | "won" | "lost";
+type GameState = "playing" | "won" | "lost";
 type Difficulty = "easy" | "medium" | "hard";
 const MAX_INCORRECT_TRIES = 6;
 
 export default function GameClient() {
-  const [gameState, setGameState] = useState<GameState>("difficulty-select");
-  const [difficulty, setDifficulty] = useState<Difficulty | null>(null);
+  const [gameState, setGameState] = useState<GameState>("playing");
   const [wordData, setWordData] = useState<WordData | null>(null);
-  const [scrambledDef, setScrambledDef] = useState<string>("");
+  const [definition, setDefinition] = useState<string>("");
   const [guessedLetters, setGuessedLetters] = useState<{ correct: string[]; incorrect: string[] }>({ correct: [], incorrect: [] });
   const [hint, setHint] = useState<string | null>(null);
   const [score, setScore] = useState(0);
@@ -28,15 +27,25 @@ export default function GameClient() {
 
   const { toast } = useToast();
 
-  const startNewGame = useCallback((diff: Difficulty) => {
-    const newWordData = getWordByDifficulty(diff);
-    setDifficulty(diff);
+  const getDifficultyForLevel = (level: number): Difficulty => {
+    if (level <= 5) return 'easy';
+    if (level <= 10) return 'medium';
+    return 'hard';
+  };
+
+  const startNewGame = useCallback((level: number) => {
+    const difficulty = getDifficultyForLevel(level);
+    const newWordData = getWordByDifficulty(difficulty);
     setWordData(newWordData);
-    setScrambledDef(scrambleDefinition(newWordData.definition));
+    setDefinition(newWordData.definition);
     setGuessedLetters({ correct: [], incorrect: [] });
     setHint(null);
     setGameState("playing");
   }, []);
+
+  useEffect(() => {
+    startNewGame(level);
+  }, [level, startNewGame]);
 
   const handleGuess = useCallback((letter: string) => {
     if (gameState !== "playing" || guessedLetters.correct.includes(letter) || guessedLetters.incorrect.includes(letter)) {
@@ -91,29 +100,14 @@ export default function GameClient() {
     const isWon = wordData.word.split('').every(char => guessedLetters.correct.includes(char.toLowerCase()));
     if (isWon) {
       setGameState("won");
+      const difficulty = getDifficultyForLevel(level);
       setScore(s => s + (difficulty === 'easy' ? 10 : difficulty === 'medium' ? 20 : 30));
-      setLevel(l => l + 1);
+      setTimeout(() => setLevel(l => l + 1), 2000);
     } else if (guessedLetters.incorrect.length >= MAX_INCORRECT_TRIES) {
       setGameState("lost");
     }
-  }, [guessedLetters, wordData, difficulty]);
+  }, [guessedLetters, wordData, level]);
 
-
-  if (gameState === "difficulty-select") {
-    return (
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Choose Your Difficulty</CardTitle>
-          <CardDescription>The challenge awaits, detective.</CardDescription>
-        </CardHeader>
-        <CardContent className="flex justify-center gap-4">
-          <Button onClick={() => startNewGame("easy")} variant="outline">Easy</Button>
-          <Button onClick={() => startNewGame("medium")}>Medium</Button>
-          <Button onClick={() => startNewGame("hard")} variant="destructive">Hard</Button>
-        </CardContent>
-      </Card>
-    );
-  }
 
   const incorrectTriesLeft = MAX_INCORRECT_TRIES - guessedLetters.incorrect.length;
 
@@ -131,10 +125,10 @@ export default function GameClient() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-center">Unscramble the Definition</CardTitle>
+          <CardTitle className="text-center">Definition</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-center text-lg italic text-muted-foreground p-4 bg-muted/50 rounded-md">{scrambledDef}</p>
+          <p className="text-center text-lg italic text-muted-foreground p-4 bg-muted/50 rounded-md">{definition}</p>
         </CardContent>
       </Card>
 
@@ -148,19 +142,20 @@ export default function GameClient() {
       
       {(gameState === "won" || gameState === "lost") ? (
         <Alert variant={gameState === 'won' ? 'default' : 'destructive'} className="text-center">
-           {gameState === 'won' ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+           {gameState === 'won' ? <PartyPopper className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
           <AlertTitle className="text-2xl font-bold">
             {gameState === 'won' ? "You solved it!" : "Case closed... incorrectly."}
           </AlertTitle>
           <AlertDescription>
-            {gameState === 'won' ? `The word was "${wordData?.word}". Excellent work, detective!` : `The word was "${wordData?.word}". Better luck next time.`}
+            {gameState === 'won' ? `The word was "${wordData?.word}". Loading next case...` : `The word was "${wordData?.word}". Better luck next time.`}
           </AlertDescription>
-          <div className="mt-4 flex justify-center gap-4">
-            <Button onClick={() => difficulty && startNewGame(difficulty)}>
-              <RotateCw className="mr-2 h-4 w-4" /> Next Case
-            </Button>
-            <Button variant="outline" onClick={() => setGameState('difficulty-select')}>Change Difficulty</Button>
-          </div>
+          {gameState === 'lost' && (
+             <div className="mt-4 flex justify-center gap-4">
+                <Button onClick={() => setLevel(1)}>
+                    <RotateCw className="mr-2 h-4 w-4" /> Start Over
+                </Button>
+            </div>
+          )}
         </Alert>
       ) : (
         <>

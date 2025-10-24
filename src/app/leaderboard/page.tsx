@@ -20,7 +20,7 @@ export default function LeaderboardPage() {
       <div className="text-center mb-8">
         <Trophy className="mx-auto h-12 w-12 text-primary" />
         <h1 className="text-4xl font-bold mt-2 font-headline">Leaderboard</h1>
-        <p className="text-muted-foreground mt-2">See who's at the top of their game.</p>
+        <p className="text-muted-foreground mt-2">See who's at the top of their game. (Note: Data is for demonstration purposes only)</p>
       </div>
       <Card>
         <CardContent className="p-0">
@@ -41,7 +41,7 @@ export default function LeaderboardPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <Avatar className="h-9 w-9">
+                      <Avatar className="h-9 w-9 animate-pulse-slow">
                         <AvatarImage src={entry.avatar} alt={entry.player} data-ai-hint={entry.hint} />
                         <AvatarFallback>{entry.player.charAt(0)}</AvatarFallback>
                       </Avatar>

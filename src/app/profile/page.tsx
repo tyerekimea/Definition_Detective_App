@@ -43,7 +43,7 @@ export default function ProfilePage() {
   return (
     <div className="container mx-auto py-8">
       <div className="flex flex-col items-center gap-4 text-center">
-        <Avatar className="h-32 w-32 border-4 border-primary">
+        <Avatar className="h-32 w-32 border-4 border-primary animate-pulse-slow">
           {avatarImage && <AvatarImage src={avatarImage.imageUrl} alt={user.name} data-ai-hint={avatarImage.imageHint} />}
           <AvatarFallback className="text-4xl">{user.name.charAt(0)}</AvatarFallback>
         </Avatar>
@@ -77,7 +77,7 @@ export default function ProfilePage() {
               <Target className="h-6 w-6 text-green-500" />
               <span className="font-medium">Rank</span>
             </div>
-            <Badge variant="secondary" className="text-lg">#1,234</Badge>
+            <Badge variant="secondary" className="text-lg">#4</Badge>
           </div>
         </CardContent>
       </Card>

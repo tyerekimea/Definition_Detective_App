@@ -15,6 +15,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { useFirestore } from "@/firebase";
 import { doc, updateDoc, increment } from "firebase/firestore";
 import { useSound } from "@/hooks/use-sound";
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError } from "@/firebase/errors";
 
 type GameState = "playing" | "won" | "lost";
 type Difficulty = "easy" | "medium" | "hard";
@@ -127,37 +129,52 @@ export default function GameClient() {
     });
   }, [wordData, guessedLetters.correct, hint]);
 
-  const updateFirestoreUser = useCallback(async (newScore: number, newLevel: number) => {
-    if (user) {
-      const userRef = doc(firestore, "users", user.uid);
-      await updateDoc(userRef, {
-        totalScore: increment(newScore),
-        highestLevel: newLevel,
-        updatedAt: new Date().toISOString(),
-      });
+  const updateFirestoreUser = useCallback(async (scoreGained: number, newLevel: number) => {
+    if (user && firestore) {
+        const userRef = doc(firestore, "users", user.uid);
+        const updateData = {
+            totalScore: increment(scoreGained),
+            highestLevel: newLevel,
+            updatedAt: new Date().toISOString(),
+        };
+
+        updateDoc(userRef, updateData)
+            .catch((serverError) => {
+                const permissionError = new FirestorePermissionError({
+                    path: userRef.path,
+                    operation: 'update',
+                    requestResourceData: updateData,
+                });
+                errorEmitter.emit('permission-error', permissionError);
+            });
     }
-  }, [user, firestore]);
+}, [user, firestore]);
 
   useEffect(() => {
-    if (!wordData || gameState !== 'playing') return;
+    if (!wordData) return;
+
     const isWon = wordData.word.split('').every(char => guessedLetters.correct.includes(char.toLowerCase()));
-    if (isWon) {
+    
+    if (isWon && gameState === "playing") {
       setGameState("won");
       if (sounds.win) playSound(sounds.win);
+      
       const difficulty = getDifficultyForLevel(level);
       const scoreGained = (difficulty === 'easy' ? 10 : difficulty === 'medium' ? 20 : 30);
-      const newScore = score + scoreGained;
-      setScore(newScore);
+      setScore(s => s + scoreGained);
+      
       const newLevel = level + 1;
       updateFirestoreUser(scoreGained, newLevel);
+      
       setTimeout(() => {
         setLevel(newLevel);
         startNewGame(newLevel);
       }, 2000);
-    } else if (guessedLetters.incorrect.length >= MAX_INCORRECT_TRIES) {
+
+    } else if (guessedLetters.incorrect.length >= MAX_INCORRECT_TRIES && gameState === "playing") {
       setGameState("lost");
     }
-  }, [guessedLetters, wordData, level, score, sounds, playSound, startNewGame, updateFirestoreUser]);
+  }, [guessedLetters, wordData, level, score, sounds, playSound, startNewGame, updateFirestoreUser, gameState]);
 
 
   const incorrectTriesLeft = MAX_INCORRECT_TRIES - guessedLetters.incorrect.length;

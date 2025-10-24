@@ -19,6 +19,8 @@ import {
 import { doc, setDoc } from 'firebase/firestore';
 import { useFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 interface AuthContextType {
   user: User | null;
@@ -69,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         // Create user profile in Firestore
         const userRef = doc(firestore, 'users', newUser.uid);
-        await setDoc(userRef, {
+        const userData = {
           id: newUser.uid,
           username: name,
           email: newUser.email,
@@ -77,7 +79,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           highestLevel: 1,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
-        });
+        };
+
+        setDoc(userRef, userData)
+          .catch((serverError) => {
+            const permissionError = new FirestorePermissionError({
+              path: userRef.path,
+              operation: 'create',
+              requestResourceData: userData,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+          });
         
         router.push('/');
       } catch (error) {

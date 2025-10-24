@@ -131,10 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             });
 
         // This part is important to see the change reflected in the UI immediately
-        if (auth.currentUser) {
-            // Create a new object for the user state to trigger re-render
-            setUser({ ...auth.currentUser, displayName: newName });
-        }
+        setUser(auth.currentUser);
 
       } catch (error) {
         console.error("Error updating username:", error);

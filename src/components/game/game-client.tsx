@@ -225,7 +225,7 @@ export default function GameClient() {
     } else if (guessedLetters.incorrect.length >= MAX_INCORRECT_TRIES) {
       setGameState("lost");
     }
-  }, [guessedLetters, wordData, level, sounds, playSound, startNewGame, updateFirestoreUser, gameState, displayedWord]);
+  }, [guessedLetters, wordData, level, sounds, playSound, startNewGame, updateFirestoreUser, gameState, displayedWord, hint]);
 
   const incorrectTriesLeft = MAX_INCORRECT_TRIES - guessedLetters.incorrect.length;
   const hintDisabled = isHintLoading || !!hint || !user;
@@ -270,8 +270,8 @@ export default function GameClient() {
           </AlertDescription>
           {gameState === 'lost' && (
              <div className="mt-4 flex justify-center gap-4">
-                <Button onClick={() => { setLevel(1); setScore(0); startNewGame(1); }}>
-                    <RotateCw className="mr-2 h-4 w-4" /> Start Over
+                <Button onClick={() => startNewGame(level)}>
+                    <RotateCw className="mr-2 h-4 w-4" /> Retry Level
                 </Button>
             </div>
           )}

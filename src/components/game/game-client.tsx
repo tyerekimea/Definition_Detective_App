@@ -5,7 +5,7 @@ import { getWordByDifficulty, type WordData, getRankForScore } from "@/lib/game-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Keyboard } from "@/components/game/keyboard";
-import { Lightbulb, RotateCw, XCircle, Award, PartyPopper } from "lucide-react";
+import { Lightbulb, RotateCw, XCircle, Award, PartyPopper, Clapperboard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getHintAction, getSoundAction } from "@/lib/actions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -17,6 +17,14 @@ import { useSound } from "@/hooks/use-sound";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
 import type { UserProfile } from "@/lib/firebase-types";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Progress } from "@/components/ui/progress";
 
 type GameState = "playing" | "won" | "lost";
 type Difficulty = "easy" | "medium" | "hard";
@@ -37,6 +45,8 @@ export default function GameClient() {
   const [score, setScore] = useState(0);
   const [level, setLevel] = useState(1);
   const [isHintLoading, startHintTransition] = useTransition();
+  const [isWatchingAd, setIsWatchingAd] = useState(false);
+  const [adProgress, setAdProgress] = useState(0);
 
   const [sounds, setSounds] = useState<SoundMap>({});
   const { playSound } = useSound();
@@ -106,7 +116,7 @@ export default function GameClient() {
     }
   }, [wordData, gameState, guessedLetters, sounds, playSound]);
 
-  const handleHintRequest = () => {
+  const getHint = async (isFree: boolean = false) => {
     if (!wordData) return;
     startHintTransition(async () => {
       const { hint: newHint, error } = await getHintAction({
@@ -122,9 +132,30 @@ export default function GameClient() {
         });
       } else if (newHint) {
         setHint(newHint);
-        setScore(s => Math.max(0, s - 5)); // Penalty for using hint
+        if (!isFree) {
+          setScore(s => Math.max(0, s - 5)); // Penalty for using paid hint
+        }
       }
     });
+  };
+
+  const handleRewardedAd = () => {
+    setIsWatchingAd(true);
+    setAdProgress(0);
+
+    const interval = setInterval(() => {
+      setAdProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          setTimeout(() => {
+            setIsWatchingAd(false);
+            getHint(true); // Grant a free hint
+          }, 500);
+          return 100;
+        }
+        return prev + 10;
+      });
+    }, 300);
   };
 
   const displayedWord = useMemo(() => {
@@ -168,11 +199,11 @@ export default function GameClient() {
                 errorEmitter.emit('permission-error', permissionError);
             });
     }
-}, [user, firestore]);
+  }, [user, firestore]);
 
-useEffect(() => {
+  useEffect(() => {
     if (!wordData || gameState !== "playing") return;
-
+  
     const isWon = wordData.word.split('').every(char => guessedLetters.correct.includes(char.toLowerCase()));
     
     if (isWon) {
@@ -190,14 +221,14 @@ useEffect(() => {
         setLevel(newLevel);
         startNewGame(newLevel);
       }, 2000);
-
+  
     } else if (guessedLetters.incorrect.length >= MAX_INCORRECT_TRIES) {
       setGameState("lost");
     }
   }, [guessedLetters, wordData, level, sounds, playSound, startNewGame, updateFirestoreUser, gameState]);
 
-
   const incorrectTriesLeft = MAX_INCORRECT_TRIES - guessedLetters.incorrect.length;
+  const hintDisabled = isHintLoading || !!hint || !user;
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-8">
@@ -247,10 +278,14 @@ useEffect(() => {
         </Alert>
       ) : (
         <>
-          <div className="flex justify-center">
-            <Button onClick={handleHintRequest} disabled={isHintLoading || !user}>
-              <Lightbulb className={cn("mr-2 h-4 w-4", isHintLoading && "animate-spin")} />
-              {isHintLoading ? 'Getting Hint...' : 'Get a Hint (-5 score)'}
+          <div className="flex justify-center gap-4">
+            <Button onClick={() => getHint(false)} disabled={hintDisabled}>
+              <Lightbulb className={cn("mr-2 h-4 w-4", isHintLoading && !isWatchingAd && "animate-spin")} />
+              {isHintLoading && !isWatchingAd ? 'Getting Hint...' : 'Get a Hint (-5 score)'}
+            </Button>
+             <Button onClick={handleRewardedAd} disabled={hintDisabled} variant="outline">
+              <Clapperboard className={cn("mr-2 h-4 w-4", isWatchingAd && "animate-spin")} />
+              {isWatchingAd ? 'Loading Ad...' : 'Watch Ad for Hint'}
             </Button>
           </div>
           {!user && <p className="text-center text-destructive text-sm">Please log in to use hints and save progress.</p>}
@@ -258,6 +293,25 @@ useEffect(() => {
           <Keyboard onKeyClick={handleGuess} guessedLetters={guessedLetters} />
         </>
       )}
+
+      <AlertDialog open={isWatchingAd}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Your hint is sponsored by...</AlertDialogTitle>
+            <AlertDialogDescription>
+              This ad will finish shortly. Thanks for your support!
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex flex-col items-center justify-center space-y-4 py-8">
+            <div className="w-full h-32 bg-muted rounded-md flex items-center justify-center">
+              <p className="text-muted-foreground">Video Ad Simulation</p>
+            </div>
+            <Progress value={adProgress} className="w-full" />
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
+
+    

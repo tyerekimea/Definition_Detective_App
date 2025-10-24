@@ -65,8 +65,8 @@ export default function LeaderboardPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <Avatar className="h-9 w-9 animate-pulse">
-                          <AvatarImage src={`https://picsum.photos/seed/${entry.id}/40/40`} alt={entry.username} data-ai-hint="profile picture" />
+                        <Avatar className="h-9 w-9">
+                          <AvatarImage src={`https://images.unsplash.com/photo-1580518337843-697673556b90?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxNXx8ZGV0ZWN0aXZlfGVufDB8fHx8MTc2MTEyNjA4OXww&ixlib=rb-4.1.0&q=80&w=40`} alt={entry.username} data-ai-hint="detective portrait" />
                           <AvatarFallback>{entry.username.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <span className="font-medium">{entry.username} {isCurrentUser && "(You)"}</span>

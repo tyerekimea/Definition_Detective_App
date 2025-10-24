@@ -56,7 +56,7 @@ export default function ProfilePage() {
   return (
     <div className="container mx-auto py-8">
       <div className="flex flex-col items-center gap-4 text-center">
-        <Avatar className="h-32 w-32 border-4 border-primary animate-pulse">
+        <Avatar className="h-32 w-32 border-4 border-primary">
           {avatarImage && <AvatarImage src={avatarImage.imageUrl} alt={userProfile.username} data-ai-hint={avatarImage.imageHint} />}
           <AvatarFallback className="text-4xl">{userProfile.username.charAt(0)}</AvatarFallback>
         </Avatar>

@@ -130,11 +130,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 errorEmitter.emit('permission-error', permissionError);
             });
 
+        // This part is important to see the change reflected in the UI immediately
         if (auth.currentUser) {
-            await auth.currentUser.reload();
-            const refreshedUser = { ...auth.currentUser };
-            setUser(refreshedUser);
+            // Create a new object for the user state to trigger re-render
+            setUser({ ...auth.currentUser, displayName: newName });
         }
+
       } catch (error) {
         console.error("Error updating username:", error);
       }

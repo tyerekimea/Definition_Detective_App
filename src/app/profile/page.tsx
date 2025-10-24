@@ -22,7 +22,7 @@ export default function ProfilePage() {
   const firestore = useFirestore();
 
   const userProfileRef = useMemoFirebase(() => 
-    user ? doc(firestore, "users", user.uid) : null
+    user ? doc(firestore, "userProfiles", user.uid) : null
   , [firestore, user]);
 
   const { data: userProfile, isLoading: profileLoading } = useDoc<UserProfile>(userProfileRef);

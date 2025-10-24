@@ -70,7 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const newUser = userCredential.user;
         
         // Create user profile in Firestore
-        const userRef = doc(firestore, 'users', newUser.uid);
+        const userRef = doc(firestore, 'userProfiles', newUser.uid);
         const userData = {
           id: newUser.uid,
           username: name,

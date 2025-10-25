@@ -1,3 +1,4 @@
+
 'use server';
 
 import { getSmartHint as getSmartHintFlow, SmartHintInput } from '@/ai/flows/smart-word-hints';
@@ -6,12 +7,13 @@ import { getGameSound as getGameSoundFlow, GameSoundInput } from '@/ai/flows/gam
 export async function getHintAction(data: {
   word: string;
   incorrectGuesses: string[];
+  lettersToReveal: number;
 }) {
   try {
     const input: SmartHintInput = {
       word: data.word,
       incorrectGuesses: data.incorrectGuesses.join(''),
-      lettersToReveal: 2, 
+      lettersToReveal: data.lettersToReveal, 
     };
     const result = await getSmartHintFlow(input);
     if (!result || !result.hint) {
@@ -37,3 +39,5 @@ export async function getSoundAction(sound: string) {
         return { soundDataUri: null, error: `Failed to get sound: ${sound}` };
     }
 }
+
+    

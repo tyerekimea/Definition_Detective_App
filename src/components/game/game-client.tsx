@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getHintAction, getSoundAction } from "@/lib/actions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/hooks/use-auth.tsx";
+import { useAuth } from "@/hooks/use-auth";
 import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { doc, updateDoc, increment, getDoc } from "firebase/firestore";
 import { useSound } from "@/hooks/use-sound";
@@ -43,6 +43,7 @@ export default function GameClient() {
   const [definition, setDefinition] = useState<string>("");
   const [guessedLetters, setGuessedLetters] = useState<{ correct: string[]; incorrect: string[] }>({ correct: [], incorrect: [] });
   const [hint, setHint] = useState<string | null>(null);
+  const [revealedByHint, setRevealedByHint] = useState<string[]>([]);
   const [score, setScore] = useState(0);
   const [level, setLevel] = useState(1);
   const [isHintLoading, startHintTransition] = useTransition();
@@ -99,6 +100,7 @@ export default function GameClient() {
     setDefinition(newWordData.definition);
     setGuessedLetters({ correct: [], incorrect: [] });
     setHint(null);
+    setRevealedByHint([]);
     setGameState("playing");
   }, []);
 
@@ -107,7 +109,7 @@ export default function GameClient() {
   }, [level, startNewGame]);
 
   const handleGuess = useCallback((letter: string) => {
-    if (gameState !== "playing" || guessedLetters.correct.includes(letter) || guessedLetters.incorrect.includes(letter)) {
+    if (gameState !== "playing" || guessedLetters.correct.includes(letter) || guessedLetters.incorrect.includes(letter) || revealedByHint.includes(letter.toLowerCase())) {
       return;
     }
 
@@ -119,7 +121,7 @@ export default function GameClient() {
       setGuessedLetters(prev => ({ ...prev, incorrect: [...prev.incorrect, lowerLetter] }));
       if (sounds.incorrect) playSound(sounds.incorrect);
     }
-  }, [wordData, gameState, guessedLetters, sounds, playSound]);
+  }, [wordData, gameState, guessedLetters, sounds, playSound, revealedByHint]);
 
   const getHint = async (isFree: boolean = false) => {
     if (!wordData || !userProfileRef) return;
@@ -138,9 +140,11 @@ export default function GameClient() {
     }
 
     startHintTransition(async () => {
+      const lettersToRevealCount = revealedByHint.length + 2;
       const { hint: newHint, error } = await getHintAction({
         word: wordData.word,
         incorrectGuesses: guessedLetters.incorrect,
+        lettersToReveal: lettersToRevealCount,
       });
 
       if (error) {
@@ -155,6 +159,8 @@ export default function GameClient() {
         }
       } else if (newHint) {
         setHint(newHint);
+        const newHintedLetters = newHint.split('').filter(char => char !== '_').map(char => char.toLowerCase());
+        setRevealedByHint(newHintedLetters);
       }
     });
   };
@@ -248,7 +254,9 @@ export default function GameClient() {
   }, [guessedLetters, wordData, level, sounds, playSound, startNewGame, updateFirestoreUser, gameState, displayedWord, hint]);
 
   const incorrectTriesLeft = MAX_INCORRECT_TRIES - guessedLetters.incorrect.length;
-  const hintDisabled = isHintLoading || !!hint || !user || (userProfile?.hints ?? 0) === 0;
+  const allLettersGuessed = wordData && (wordData.word.length === (guessedLetters.correct.length + revealedByHint.length));
+  const hintDisabled = isHintLoading || allLettersGuessed || !user || (userProfile?.hints ?? 0) === 0;
+
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-8">
@@ -307,14 +315,14 @@ export default function GameClient() {
               <Lightbulb className={cn("mr-2 h-4 w-4", isHintLoading && !isWatchingAd && "animate-spin")} />
               {isHintLoading && !isWatchingAd ? 'Getting Hint...' : 'Use a Hint'}
             </Button>
-             <Button onClick={handleRewardedAd} disabled={isHintLoading || !!hint || !user} variant="outline">
+             <Button onClick={handleRewardedAd} disabled={isHintLoading || allLettersGuessed || !user} variant="outline">
               <Clapperboard className={cn("mr-2 h-4 w-4", isWatchingAd && "animate-spin")} />
               {isWatchingAd ? 'Loading Ad...' : 'Watch Ad for Hint'}
             </Button>
           </div>
           {!user && <p className="text-center text-destructive text-sm">Please log in to use hints and save progress.</p>}
           <p className="text-center text-muted-foreground">Incorrect Guesses: {guessedLetters.incorrect.join(', ').toUpperCase()} ({incorrectTriesLeft} left)</p>
-          <Keyboard onKeyClick={handleGuess} guessedLetters={guessedLetters} />
+          <Keyboard onKeyClick={handleGuess} guessedLetters={guessedLetters} revealedByHint={revealedByHint} />
         </>
       )}
 
@@ -337,3 +345,5 @@ export default function GameClient() {
     </div>
   );
 }
+
+    

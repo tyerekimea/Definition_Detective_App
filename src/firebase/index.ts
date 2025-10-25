@@ -38,11 +38,14 @@ export function getSdks(firebaseApp: FirebaseApp) {
 
   if (process.env.NODE_ENV !== 'production') {
     // This is a workaround to prevent the SDK from trying to connect to the emulator.
-    // by connecting to a non-existent emulator and then terminating it, we can force
+    // by connecting to a non-existent emulator we can force
     // the SDK to use the production services.
-    connectFirestoreEmulator(firestore, 'localhost', 8080);
-    connectAuthEmulator(auth, 'http://localhost:9099');
-    terminate(firestore);
+    try {
+      connectFirestoreEmulator(firestore, 'localhost', 8081); // Use a non-standard port
+      connectAuthEmulator(auth, 'http://localhost:9098'); // Use a non-standard port
+    } catch (e) {
+      // It's okay if this fails, it means it's already connected or this is not the first run.
+    }
   }
 
   return {

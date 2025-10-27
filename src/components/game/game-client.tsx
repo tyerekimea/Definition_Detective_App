@@ -6,12 +6,12 @@ import { getWordByDifficulty, type WordData, getRankForScore } from "@/lib/game-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Keyboard } from "@/components/game/keyboard";
-import { Lightbulb, RotateCw, XCircle, Award, PartyPopper, Clapperboard } from "lucide-react";
+import { Lightbulb, RotateCw, XCircle, Award, PartyPopper, Clapperboard, Share } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getHintAction, getSoundAction } from "@/lib/actions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/hooks/use-auth.tsx";
 import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { doc, updateDoc, increment, getDoc } from "firebase/firestore";
 import { useSound } from "@/hooks/use-sound";
@@ -26,6 +26,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Progress } from "@/components/ui/progress";
+import { Facebook, Twitter } from "lucide-react";
 
 type GameState = "playing" | "won" | "lost";
 type Difficulty = "easy" | "medium" | "hard";
@@ -33,6 +34,37 @@ const MAX_INCORRECT_TRIES = 6;
 
 type SoundMap = {
   [key: string]: string | null;
+}
+
+const ShareButton = ({ platform, text, url }: { platform: 'whatsapp' | 'facebook' | 'x', text: string, url: string }) => {
+  const platforms = {
+    whatsapp: {
+      url: `https://api.whatsapp.com/send?text=${encodeURIComponent(text + ' ' + url)}`,
+      icon: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>,
+      label: "WhatsApp"
+    },
+    facebook: {
+      url: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(text)}`,
+      icon: <Facebook className="h-4 w-4" />,
+      label: "Facebook"
+    },
+    x: {
+      url: `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`,
+      icon: <Twitter className="h-4 w-4" />,
+      label: "X"
+    }
+  }
+
+  const handleShare = () => {
+    window.open(platforms[platform].url, '_blank');
+  }
+
+  return (
+    <Button onClick={handleShare} variant="outline" size="sm">
+      {platforms[platform].icon}
+      <span className="ml-2">{platforms[platform].label}</span>
+    </Button>
+  )
 }
 
 export default function GameClient() {
@@ -49,6 +81,7 @@ export default function GameClient() {
   const [isHintLoading, startHintTransition] = useTransition();
   const [isWatchingAd, setIsWatchingAd] = useState(false);
   const [adProgress, setAdProgress] = useState(0);
+  const [appUrl, setAppUrl] = useState("");
 
   const [sounds, setSounds] = useState<SoundMap>({});
   const { playSound } = useSound();
@@ -57,6 +90,12 @@ export default function GameClient() {
     user ? doc(firestore, "userProfiles", user.uid) : null
   , [firestore, user]);
   const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setAppUrl(window.location.origin);
+    }
+  }, []);
   
   useEffect(() => {
     if(userProfile) {
@@ -190,13 +229,13 @@ export default function GameClient() {
     return wordChars.map((char, index) => {
       const lowerChar = char.toLowerCase();
       const isGuessed = guessedLetters.correct.includes(lowerChar);
-      const isHinted = hint?.split('')[index]?.toLowerCase() === lowerChar;
+      const isHinted = revealedByHint.includes(lowerChar);
       if (isGuessed || isHinted) {
         return { char, revealed: true };
       }
       return { char, revealed: false };
     });
-  }, [wordData, guessedLetters.correct, hint]);
+  }, [wordData, guessedLetters.correct, revealedByHint]);
 
   const updateFirestoreUser = useCallback(async (scoreGained: number, newLevel: number) => {
     if (user && firestore) {
@@ -246,17 +285,18 @@ export default function GameClient() {
       setTimeout(() => {
         setLevel(newLevel);
         startNewGame(newLevel, wordData.word);
-      }, 2000);
+      }, 3000);
   
     } else if (guessedLetters.incorrect.length >= MAX_INCORRECT_TRIES) {
       setGameState("lost");
     }
-  }, [guessedLetters, wordData, level, sounds, playSound, startNewGame, updateFirestoreUser, gameState, displayedWord, hint]);
+  }, [guessedLetters, wordData, level, sounds, playSound, startNewGame, updateFirestoreUser, gameState, displayedWord, hint, revealedByHint]);
 
   const incorrectTriesLeft = MAX_INCORRECT_TRIES - guessedLetters.incorrect.length;
   const allLettersGuessed = wordData && (wordData.word.length === (guessedLetters.correct.length + revealedByHint.length));
   const hintDisabled = isHintLoading || allLettersGuessed || !user || (userProfile?.hints ?? 0) === 0;
 
+  const shareText = `I just reached level ${level} in Definition Detective with a score of ${score.toLocaleString()}! Can you beat me?`;
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-8">
@@ -300,6 +340,18 @@ export default function GameClient() {
           <AlertDescription>
             {gameState === 'won' ? `The word was "${wordData?.word}". Loading next case...` : `The word was "${wordData?.word}". Better luck next time.`}
           </AlertDescription>
+          
+          {gameState === 'won' && (
+            <div className="mt-4 space-y-3">
+              <p className="text-sm font-medium flex items-center justify-center gap-2"><Share className="h-4 w-4" /> Share Your Victory!</p>
+              <div className="flex justify-center gap-2">
+                <ShareButton platform="whatsapp" text={shareText} url={appUrl} />
+                <ShareButton platform="facebook" text={shareText} url={appUrl} />
+                <ShareButton platform="x" text={shareText} url={appUrl} />
+              </div>
+            </div>
+          )}
+
           {gameState === 'lost' && (
              <div className="mt-4 flex justify-center gap-4">
                 <Button onClick={() => startNewGame(level, wordData?.word)}>

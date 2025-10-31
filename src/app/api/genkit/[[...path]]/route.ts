@@ -1,6 +1,6 @@
 
-import { api } from '@genkit-ai/next/api';
+import { createApiHandler } from '@genkit-ai/next';
 import '@/ai/flows/smart-word-hints';
 import '@/ai/flows/game-sounds-flow';
 
-export const { GET, POST } = api();
+export const { GET, POST } = createApiHandler();

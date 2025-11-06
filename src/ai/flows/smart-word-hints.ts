@@ -1,3 +1,4 @@
+
 'use server';
 
 import { ai } from '@/ai/genkit';
@@ -70,7 +71,8 @@ const smartHintFlow = ai.defineFlow(
           const parsed = JSON.parse(response.output);
           hintText = parsed.hint ?? '';
         } catch {
-          hintText = response.output;
+          // If parsing fails, treat the whole string as the hint, and clean it up.
+          hintText = response.output.replace(/[^a-zA-Z_]/g, '');
         }
       } else if (response.output?.hint) {
         hintText = response.output.hint;
@@ -79,7 +81,8 @@ const smartHintFlow = ai.defineFlow(
       return { hint: hintText.trim() };
     } catch (error) {
       console.error('❌ Smart hint flow failed:', error);
-      return { hint: 'Sorry, no hint available right now.' };
+      // Propagate a clear error to the action
+      throw new Error('Sorry, no hint available right now.');
     }
   }
 );

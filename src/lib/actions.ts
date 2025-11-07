@@ -6,13 +6,13 @@ import { getGameSound as getGameSoundFlow, GameSoundInput } from '@/ai/flows/gam
 
 export async function getHintAction(data: {
   word: string;
-  incorrectGuesses: string[];
+  incorrectGuesses: string;
   lettersToReveal: number;
 }) {
   try {
     const input: SmartHintInput = {
       word: data.word,
-      incorrectGuesses: data.incorrectGuesses.join(''),
+      incorrectGuesses: data.incorrectGuesses,
       lettersToReveal: data.lettersToReveal, 
     };
     const result = await getSmartHintFlow(input);
@@ -39,5 +39,3 @@ export async function getSoundAction(sound: string) {
         return { soundDataUri: null, error: `Failed to get sound: ${sound}` };
     }
 }
-
-    

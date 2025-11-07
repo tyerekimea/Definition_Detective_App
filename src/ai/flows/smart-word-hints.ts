@@ -9,7 +9,7 @@ import { z } from 'genkit';
  */
 const SmartHintInputSchema = z.object({
   word: z.string().describe('The word to provide a hint for.'),
-  incorrectGuesses: z.string().describe('The letters the player has already guessed incorrectly.'),
+  incorrectGuesses: z.string().describe('A string of letters the player has already guessed incorrectly.'),
   lettersToReveal: z.number().describe('The number of letters to reveal in the hint.'),
 });
 export type SmartHintInput = z.infer<typeof SmartHintInputSchema>;
@@ -41,7 +41,7 @@ Rules:
 1. Reveal only the specified number of letters.
 2. Do not reveal letters that were guessed incorrectly.
 3. Replace unrevealed letters with underscores.
-4. Return your response **ONLY** in valid JSON format, e.g.:
+4. Your response MUST be only the valid JSON object requested, like this example:
 
 {
   "hint": "e_a__p_e"
@@ -62,23 +62,24 @@ const smartHintFlow = ai.defineFlow(
   },
   async (input) => {
     try {
-      const response = await smartHintPrompt(input);
+      const {output} = await smartHintPrompt(input);
 
-      // 🧩 Safely handle both structured and plain text responses
-      let hintText = '';
-      if (typeof response.output === 'string') {
-        try {
-          const parsed = JSON.parse(response.output);
-          hintText = parsed.hint ?? '';
-        } catch {
-          // If parsing fails, treat the whole string as the hint, and clean it up.
-          hintText = response.output.replace(/[^a-zA-Z_]/g, '');
+      if (!output?.hint) {
+         // If we don't get a valid hint object, try to parse it from a string.
+        if (typeof output === 'string') {
+          try {
+            const parsed = JSON.parse(output);
+            return { hint: parsed.hint || '' };
+          } catch (e) {
+             console.error('Failed to parse string response from AI', e);
+             throw new Error('AI returned an unparsable string.');
+          }
         }
-      } else if (response.output?.hint) {
-        hintText = response.output.hint;
+        throw new Error('AI response did not contain a hint.');
       }
+      
+      return output;
 
-      return { hint: hintText.trim() };
     } catch (error) {
       console.error('❌ Smart hint flow failed:', error);
       // Propagate a clear error to the action
@@ -93,3 +94,6 @@ const smartHintFlow = ai.defineFlow(
 export async function getSmartHint(input: SmartHintInput): Promise<SmartHintOutput> {
   return smartHintFlow(input);
 }
+
+// ✅ Expose the flow to the app (required!)
+export const smartHint = smartHintFlow;

@@ -1,7 +1,7 @@
 'use client';
 
 import { initializeApp, getApps } from 'firebase/app';
-import { getAnalytics } from 'firebase/analytics';
+import { getAnalytics }s from 'firebase/analytics';
 import React from 'react';
 
 const firebaseConfig = {

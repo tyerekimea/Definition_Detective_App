@@ -17,10 +17,12 @@ import { FirestorePermissionError } from "@/firebase/errors";
 import { useTheme } from "@/hooks/use-theme";
 
 const themes = [
-  { id: "dark", name: "Default Dark", description: "The standard dark theme." },
   { id: "light", name: "Default Light", description: "The standard light theme." },
-  { id: "noir", name: "Film Noir", description: "A classic black and white detective look.", isPurchasable: true },
-  { id: "cyberpunk", name: "Cyberpunk", description: "A neon-lit futuristic theme.", isPurchasable: true },
+  { id: "dark", name: "Default Dark", description: "The standard dark theme." },
+  { id: "playful", name: "Playful & Friendly", description: "Fun, energetic, and inviting.", isPurchasable: true },
+  { id: "elegant", name: "Elegant & Focused", description: "Calm, minimal, and professional.", isPurchasable: true },
+  { id: "night", name: "Immersive Dark", description: "Sleek and modern for focused play.", isPurchasable: true },
+  { id: "gradient", name: "Gamified Gradient", description: "Energetic, futuristic, and dynamic.", isPurchasable: true },
 ];
 
 const hintPacks = [

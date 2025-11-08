@@ -8,12 +8,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Keyboard } from "@/components/game/keyboard";
 import { Lightbulb, RotateCw, XCircle, Award, PartyPopper, Clapperboard, Share } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { getHintAction, getSoundAction } from "@/lib/actions";
+import { getHintAction, getSoundAction, useHintAction } from "@/lib/actions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth.tsx";
 import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
-import { doc, updateDoc, increment, getDoc } from "firebase/firestore";
+import { doc, updateDoc, increment, getDoc, serverTimestamp } from "firebase/firestore";
 import { useSound } from "@/hooks/use-sound";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
@@ -58,7 +58,7 @@ export default function GameClient() {
   const userProfileRef = useMemoFirebase(() => 
     user ? doc(firestore, "userProfiles", user.uid) : null
   , [firestore, user]);
-  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
+  const { data: userProfile, isLoading: profileLoading } = useDoc<UserProfile>(userProfileRef);
   
   useEffect(() => {
     if(userProfile) {
@@ -126,22 +126,21 @@ export default function GameClient() {
   }, [wordData, gameState, guessedLetters, sounds, playSound, revealedByHint]);
 
   const getHint = async (isFree: boolean = false) => {
-    if (!wordData || !userProfileRef) return;
+    if (!wordData || !userProfileRef || !user) return;
     
-    if (!isFree) {
-      if (userProfile && userProfile.hints > 0) {
-         updateDoc(userProfileRef, { hints: increment(-1) }).catch((err) => console.error(err));
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Out of Hints",
-          description: "You don't have any hints left. Watch an ad or buy more in the store.",
-        });
-        return;
-      }
-    }
-
     startHintTransition(async () => {
+      if (!isFree) {
+        const useHintResult = await useHintAction({ userId: user.uid });
+        if (!useHintResult.success) {
+          toast({
+            variant: "destructive",
+            title: "Out of Hints",
+            description: useHintResult.message || "You don't have any hints left. Watch an ad or buy more in the store.",
+          });
+          return;
+        }
+      }
+
       const lettersToRevealCount = revealedByHint.length + 2;
       const { hint: newHint, error } = await getHintAction({
         word: wordData.word,
@@ -155,10 +154,7 @@ export default function GameClient() {
           title: "Hint Error",
           description: error,
         });
-         // If AI fails, refund the hint
-        if (!isFree) {
-          updateDoc(userProfileRef, { hints: increment(1) }).catch((err) => console.error(err));
-        }
+        // If AI fails, we would ideally refund the hint via another server action
       } else if (newHint) {
         setHint(newHint);
         const newHintedLetters = newHint.split('').filter(char => char !== '_').map(char => char.toLowerCase());
@@ -214,7 +210,7 @@ export default function GameClient() {
             totalScore: increment(scoreGained),
             highestLevel: newLevel,
             rank: newRank,
-            updatedAt: new Date().toISOString(),
+            updatedAt: serverTimestamp(),
         };
 
         updateDoc(userRef, updateData)
@@ -257,7 +253,7 @@ export default function GameClient() {
 
   const incorrectTriesLeft = MAX_INCORRECT_TRIES - guessedLetters.incorrect.length;
   const allLettersGuessed = wordData && (wordData.word.length === (guessedLetters.correct.length + revealedByHint.length));
-  const hintDisabled = isHintLoading || allLettersGuessed || !user || (userProfile?.hints ?? 0) === 0;
+  const hintDisabled = isHintLoading || allLettersGuessed || !user || profileLoading;
 
   const shareText = "I'm playing Definition Detective! Can you beat my high score?";
 
@@ -270,7 +266,7 @@ export default function GameClient() {
         </div>
         <div className="flex items-center gap-2 text-lg">
           <Lightbulb className="h-6 w-6 text-yellow-400" />
-          Hints: <span className="font-bold">{userProfile?.hints ?? 0}</span>
+          Hints: <span className="font-bold">{profileLoading ? '...' : userProfile?.hints ?? 0}</span>
         </div>
         <div className="flex items-center gap-2 text-lg">
           Level: <span className="font-bold">{level}</span>

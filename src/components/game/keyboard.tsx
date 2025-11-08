@@ -39,7 +39,7 @@ export function Keyboard({ onKeyClick, guessedLetters, revealedByHint }: Keyboar
                 variant="outline"
                 className={cn(
                   "h-10 w-10 md:h-12 md:w-12 p-0 text-lg font-bold uppercase",
-                  isCorrect && "bg-green-500/80 hover:bg-green-500/90 text-primary-foreground border-green-600",
+                  isCorrect && "bg-[hsl(var(--correct))] hover:bg-[hsl(var(--correct))] text-primary-foreground border-transparent",
                   isIncorrect && "bg-destructive/80 hover:bg-destructive/90 text-destructive-foreground border-destructive/90",
                   isHinted && "bg-blue-500/80 hover:bg-blue-500/90 text-primary-foreground border-blue-600 opacity-50 cursor-not-allowed"
                 )}
@@ -53,5 +53,3 @@ export function Keyboard({ onKeyClick, guessedLetters, revealedByHint }: Keyboar
     </div>
   );
 }
-
-    

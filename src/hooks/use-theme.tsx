@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 
-type Theme = "dark" | "light" | "system" | "noir" | "cyberpunk";
+type Theme = "dark" | "light" | "system" | "playful" | "elegant" | "night" | "gradient";
 
 type ThemeProviderProps = {
   children: ReactNode;
@@ -39,7 +39,7 @@ export function ThemeProvider({
 
   useEffect(() => {
     const root = window.document.documentElement;
-    root.classList.remove("light", "dark", "noir", "cyberpunk");
+    root.classList.remove("light", "dark", "playful", "elegant", "night", "gradient");
 
     let systemTheme: Theme = "dark"; // Default to dark if system theme is not available
     if (theme === "system") {
@@ -51,6 +51,11 @@ export function ThemeProvider({
     const effectiveTheme = theme === "system" ? systemTheme : theme;
 
     root.classList.add(effectiveTheme);
+    document.body.classList.remove("gradient-background");
+    if(effectiveTheme === 'gradient') {
+      document.body.classList.add("gradient-background");
+    }
+
     localStorage.setItem(storageKey, theme);
   }, [theme, storageKey]);
 

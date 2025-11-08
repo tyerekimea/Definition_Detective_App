@@ -3,6 +3,8 @@
 
 import { getSmartHint as getSmartHintFlow, SmartHintInput } from '@/ai/flows/smart-word-hints';
 import { getGameSound as getGameSoundFlow, GameSoundInput } from '@/ai/flows/game-sounds-flow';
+import { useHint as useHintFlow, UseHintInput } from '@/ai/flows/use-hint-flow';
+import { auth } from 'firebase-admin';
 
 export async function getHintAction(data: {
   word: string;
@@ -38,4 +40,15 @@ export async function getSoundAction(sound: string) {
         console.error(`Error getting sound for "${sound}":`, error);
         return { soundDataUri: null, error: `Failed to get sound: ${sound}` };
     }
+}
+
+export async function useHintAction(data: { userId: string }) {
+  try {
+    const input: UseHintInput = { userId: data.userId };
+    const result = await useHintFlow(input);
+    return { success: result.success, message: result.message, error: null };
+  } catch (error: any) {
+    console.error('Error using hint:', error);
+    return { success: false, message: error.message || 'Failed to use a hint.', error: 'Failed to use a hint. Please try again.' };
+  }
 }

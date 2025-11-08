@@ -1,22 +1,51 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
 
     // By default, deny all reads and writes
     match /{document=**} {
       allow read, write: if false;
     }
 
-    // Allow authenticated users to read the leaderboard and their own profile
-    match /userProfiles/{userProfileId} {
-      allow get, list: if request.auth != null;
-      allow update: if request.auth != null && request.auth.uid == userProfileId;
-    }
-
-    // Allow authenticated users to create their own profile
+    // User Profiles
     match /userProfiles/{userId} {
-      allow create: if request.auth != null && request.auth.uid == userId;
+      // Anyone can read a user profile (for leaderboards)
+      allow get: if isSignedIn();
+      
+      // Only the owner can create their own profile
+      allow create: if isOwner(userId)
+                    && request.resource.data.totalScore == 0
+                    && request.resource.data.highestLevel == 1
+                    && request.resource.data.hints == 5;
+
+      // The owner can update their username, but not their score, level, or hints
+      allow update: if isOwner(userId)
+                    && request.resource.data.username == request.resource.data.username
+                    && request.resource.data.totalScore == resource.data.totalScore
+                    && request.resource.data.highestLevel == resource.data.highestLevel;
+      
+      // The owner can delete their own profile
+      allow delete: if isOwner(userId);
+    }
+    
+    match /leaderboardEntries/{leaderboardEntryId} {
+        allow read: if true;
+        allow create, update: if isSignedIn();
+    }
+    
+    match /userProfiles/{userId}/gameSessions/{gameSessionId} {
+        allow read, write: if isOwner(userId);
     }
   }
 }

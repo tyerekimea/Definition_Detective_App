@@ -18,7 +18,7 @@ import {
   updateProfile,
   deleteUser,
 } from 'firebase/auth';
-import { doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { useFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -82,8 +82,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           totalScore: 0,
           highestLevel: 1,
           rank: getRankForScore(0),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
           hints: 5,
         };
 

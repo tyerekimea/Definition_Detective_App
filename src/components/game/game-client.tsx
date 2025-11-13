@@ -8,7 +8,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Keyboard } from "@/components/game/keyboard";
 import { Lightbulb, RotateCw, XCircle, Award, PartyPopper, Clapperboard, Share } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { getHintAction, getSoundAction, useHintAction } from "@/lib/actions";
+import { useHintAction } from "@/lib/actions";
+import { getSmartHint } from "@/ai/flows/smart-word-hints";
+import { getGameSound } from "@/ai/flows/game-sounds-flow";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth.tsx";
@@ -70,7 +72,7 @@ export default function GameClient() {
   useEffect(() => {
     const fetchSounds = async () => {
       const soundKeys = ['correct', 'incorrect', 'win'];
-      const soundPromises = soundKeys.map(key => getSoundAction(key));
+      const soundPromises = soundKeys.map(key => getGameSound(key));
       const results = await Promise.all(soundPromises);
       const newSounds: SoundMap = {};
       results.forEach((result, index) => {
@@ -141,24 +143,27 @@ export default function GameClient() {
         }
       }
 
-      const lettersToRevealCount = revealedByHint.length + 2;
-      const { hint: newHint, error } = await getHintAction({
-        word: wordData.word,
-        incorrectGuesses: guessedLetters.incorrect.join(''),
-        lettersToReveal: lettersToRevealCount,
-      });
-
-      if (error) {
-        toast({
-          variant: "destructive",
-          title: "Hint Error",
-          description: error,
+      const lettersToRevealCount = revealedByHint.length + 1;
+      try {
+        const result = await getSmartHint({
+          word: wordData.word,
+          incorrectGuesses: guessedLetters.incorrect.join(''),
+          lettersToReveal: lettersToRevealCount,
         });
-        // If AI fails, we would ideally refund the hint via another server action
-      } else if (newHint) {
-        setHint(newHint);
-        const newHintedLetters = newHint.split('').filter(char => char !== '_').map(char => char.toLowerCase());
-        setRevealedByHint(newHintedLetters);
+
+        if (result && result.hint) {
+          setHint(result.hint);
+          const newHintedLetters = result.hint.split('').filter(char => char !== '_').map(char => char.toLowerCase());
+          setRevealedByHint(newHintedLetters);
+        } else {
+           throw new Error("Invalid hint response from AI.");
+        }
+      } catch (error) {
+         toast({
+            variant: "destructive",
+            title: "Hint Error",
+            description: 'Failed to get a hint. Please try again.',
+          });
       }
     });
   };

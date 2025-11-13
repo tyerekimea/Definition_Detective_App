@@ -15,11 +15,12 @@ export function initializeFirebase() {
   // In a deployed Firebase App Hosting environment, the SDK is automatically configured
   // by the presence of the FIREBASE_CONFIG env var.
   // In a local environment, we use the firebaseConfig object from the .env file.
-  if (process.env.FIREBASE_CONFIG) {
+  if (process.env.FIREBASE_CONFIG && typeof window === 'undefined') {
     firebaseApp = initializeApp({});
   } else {
     firebaseApp = initializeApp(firebaseConfig);
   }
+
 
   return getSdks(firebaseApp);
 }

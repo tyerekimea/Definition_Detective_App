@@ -8,8 +8,9 @@ import { Keyboard } from "@/components/game/keyboard";
 import { Lightbulb, RotateCw, XCircle, Award, PartyPopper, Clapperboard, Share } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useHintAction } from "@/lib/actions";
-import { getSmartHint } from "@/ai/flows/smart-word-hints";
-import { getSoundAction } from "@/ai/flows/game-sounds-flow";
+import { requestSmartHint } from "@/lib/api/hints";
+import { requestGameSound } from "@/lib/api/sounds";
+//import { getSoundAction } from "@/ai/flows/game-sounds-flow";
 import { useSound } from "@/hooks/use-sound";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
@@ -134,7 +135,7 @@ export default function GameClient() {
 
       const lettersToRevealCount = revealedByHint.length + 1;
       try {
-        const result = await getSmartHint({
+        const result = await requestSmartHint({
           word: wordData.word,
           incorrectGuesses: guessedLetters.incorrect.join(''),
           lettersToReveal: lettersToRevealCount,

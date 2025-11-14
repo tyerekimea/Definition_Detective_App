@@ -1,12 +1,13 @@
 'use server';
-/**
- * @fileOverview A Genkit flow for generating game sound effects.
- */
+
 import { ai } from '@/ai/genkit';
 import { googleAI } from '@genkit-ai/google-genai';
 import { z } from 'genkit';
 import wav from 'wav';
 
+/**
+ * Convert Gemini PCM → WAV
+ */
 async function toWav(
   pcmData: Buffer,
   channels = 1,
@@ -20,35 +21,30 @@ async function toWav(
       bitDepth: sampleWidth * 8,
     });
 
-    const bufs: any[] = [];
+    const buffers: Buffer[] = [];
     writer.on('error', reject);
-    writer.on('data', function (d) {
-      bufs.push(d);
-    });
-    writer.on('end', function () {
-      resolve(Buffer.concat(bufs).toString('base64'));
-    });
+    writer.on('data', (d) => buffers.push(d));
+    writer.on('end', () => resolve(Buffer.concat(buffers).toString('base64')));
 
     writer.write(pcmData);
     writer.end();
   });
 }
 
-// Types for sound configuration
-const GameSoundInputSchema = z.object({
-  soundType: z.enum(['correct', 'incorrect', 'win', 'hint', 'click']),
-});
-export type GameSoundInput = z.infer<typeof GameSoundInputSchema>;
-
+/**
+ * Main sound generation flow
+ */
 export const gameSoundsFlow = ai.defineFlow(
   {
     name: 'gameSoundsFlow',
     inputSchema: z.string(),
     outputSchema: z.any(),
   },
-  async query => {
-    const { media } = await ai.generate({
-      model: googleAI.model('gemini-2.5-flash-preview-tts'),
+  async (query) => {
+    console.log('🎮 Requesting sound for:', query);
+
+    const response = await ai.generate({
+      model: googleAI.model('gemini-1.5-flash'),
       prompt: query,
       responseModalities: ['AUDIO'],
       speechConfig: {
@@ -58,19 +54,27 @@ export const gameSoundsFlow = ai.defineFlow(
       },
     });
 
-    if (!media) {
-      throw new Error('no media returned');
+    const { media } = response ?? {};
+
+    if (!media?.url) {
+      console.error('⚠️ Missing audio media URL:', response);
+      throw new Error('Gemini did not return audio content.');
     }
-    const audioBuffer = Buffer.from(
-      media.url.substring(media.url.indexOf(',') + 1),
-      'base64'
-    );
+
+    const base64 = media.url.split(',')[1];
+    const pcm = Buffer.from(base64, 'base64');
+
+    const wavBase64 = await toWav(pcm);
+
     return {
-      media: 'data:audio/wav;base64,' + (await toWav(audioBuffer)),
+      media: 'data:audio/wav;base64,' + wavBase64,
     };
   }
 );
 
-export async function getSoundAction(input: GameSoundInput) {
-    return gameSoundsFlow(input.soundType);
+/**
+ * Optional direct helper
+ */
+export async function getSoundAction(input: { soundType: string }) {
+  return gameSoundsFlow(input.soundType);
 }

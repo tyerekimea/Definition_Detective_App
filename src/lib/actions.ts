@@ -1,20 +1,30 @@
 
 'use server';
 
-import { getApps, initializeApp, App } from 'firebase-admin/app';
+import { getApps, initializeApp, App, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import { ai } from '@/ai/genkit';
+import { genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/google-genai';
 import { z } from 'zod';
 
+// Initialize a local AI instance specifically for this server action.
+// This ensures the googleAI plugin is configured in the server action's context.
+const ai = genkit({
+  plugins: [
+    googleAI({
+      apiVersion: 'v1beta',
+    }),
+  ],
+});
+
 // Helper function to initialize the admin app if it hasn't been already.
 function initAdminApp(): App {
-  const firebaseConfig = process.env.FIREBASE_CONFIG ? JSON.parse(process.env.FIREBASE_CONFIG) : {};
   if (getApps().length > 0) {
-    // Check for the default app, and if not found, check for 'admin-app'
-    return getApps().find(app => app.name === '[DEFAULT]') || getApps().find(app => app.name === 'admin-app') || initializeApp(firebaseConfig, 'admin-app');
+    return getApps()[0];
   }
-  return initializeApp(firebaseConfig, 'admin-app');
+  // The FIREBASE_CONFIG env var is set automatically by App Hosting.
+  const firebaseConfig = process.env.FIREBASE_CONFIG ? JSON.parse(process.env.FIREBASE_CONFIG) : {};
+  return initializeApp(firebaseConfig);
 }
 
 export async function useHintAction(data: { 
@@ -53,23 +63,26 @@ export async function useHintAction(data: {
         return { success: false, message: transactionResult.message };
     }
 
-    // If the transaction was successful, proceed to generate the AI hint directly.
+    // If the transaction was successful, proceed to generate the AI hint.
     const hintResponse = await ai.generate({
-        model: googleAI('gemini-1.5-flash'),
+        model: 'gemini-1.5-flash',
         prompt: `
-            You are an AI assistant helping with smart word puzzle hints.
-
-            Word: "${data.word}"
-            Incorrect guesses: "${data.incorrectGuesses}"
-            Letters to reveal: "${data.lettersToReveal}"
+            You are an AI assistant for a word puzzle game. Your task is to provide a "smart hint".
+            The user gives you a secret word, a string of letters they have already guessed incorrectly, and a number of letters to reveal.
 
             Rules:
-            - Reveal ONLY the requested number of letters.
-            - Do NOT reveal letters in incorrect guesses.
-            - Other letters must remain "_".
-            - Return ONLY a valid JSON object with a "hint" key. Example: { "hint": "e_a__p_e" }
+            1.  Your response MUST be a JSON object with a single key: "hint".
+            2.  The value of "hint" should be a string representing the secret word.
+            3.  In this string, exactly ${data.lettersToReveal} letters of the secret word should be revealed.
+            4.  All other letters MUST be represented by an underscore "_".
+            5.  You MUST NOT reveal any letters that the user has already guessed incorrectly. Choose other letters to reveal.
+            
+            Here is the data for this request:
+            - Secret Word: "${data.word}"
+            - Incorrect Guesses: "${data.incorrectGuesses}"
+            - Letters to Reveal: ${data.lettersToReveal}
 
-            Produce the hint now.
+            Produce the JSON response now.
         `,
         output: {
             schema: z.object({
@@ -80,7 +93,7 @@ export async function useHintAction(data: {
             responseMIMEType: 'application/json',
         }
     });
-
+    
     const hintOutput = hintResponse.output;
 
     if (hintOutput?.hint) {
@@ -91,6 +104,7 @@ export async function useHintAction(data: {
 
   } catch (error: any) {
     console.error('Error in useHintAction:', error);
+    // Return a user-friendly error message to the client.
     return { success: false, message: error.message || 'An unexpected error occurred while getting a hint.' };
   }
 }

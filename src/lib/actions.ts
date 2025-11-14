@@ -8,7 +8,6 @@ import { googleAI } from '@genkit-ai/google-genai';
 import { z } from 'zod';
 
 // Helper function to initialize the admin app if it hasn't been already.
-// This function is self-contained and should not be modified.
 function initAdminApp(): App {
   if (getApps().length > 0) {
     return getApps()[0];
@@ -31,11 +30,9 @@ export async function useHintAction(data: {
   lettersToReveal: number;
 }): Promise<{ success: boolean; message?: string; hint?: string; }> {
   try {
-    // This local `ai` instance is configured specifically for this server action.
     const ai = genkit({
       plugins: [
         googleAI({
-          // Use 'v1' for standard models. 'v1beta' is for specific preview features.
           apiVersion: 'v1', 
         }),
       ],
@@ -45,7 +42,6 @@ export async function useHintAction(data: {
     const firestore = getFirestore();
     const userProfileRef = firestore.collection('userProfiles').doc(data.userId);
 
-    // Run a transaction to securely decrement the hint count.
     const transactionResult = await firestore.runTransaction(async (transaction) => {
       const userDoc = await transaction.get(userProfileRef);
 
@@ -59,20 +55,16 @@ export async function useHintAction(data: {
         return { success: false, message: "You don't have any hints left." };
       }
 
-      // Decrement the hints count by 1.
       transaction.update(userProfileRef, { hints: currentHints - 1 });
       
       return { success: true };
     });
 
-    // If the transaction failed (e.g., not enough hints), return the error.
     if (!transactionResult.success) {
         return { success: false, message: transactionResult.message };
     }
 
-    // If the transaction was successful, proceed to generate the AI hint.
     const hintResponse = await ai.generate({
-        // The model MUST be a model reference object, not a string.
         model: googleAI.model('gemini-1.5-flash'),
         prompt: `
             You are an AI assistant for a word puzzle game. Your task is to provide a "smart hint".
@@ -109,7 +101,11 @@ export async function useHintAction(data: {
     throw new Error('AI did not return a valid hint format.');
 
   } catch (error: any) {
-    console.error('Error in useHintAction:', error);
+    console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+    console.error('!!!!!!     HINT ACTION ERROR      !!!!!!');
+    console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+    console.error('Error in useHintAction:', JSON.stringify(error, null, 2));
+    console.error('Full Error Object:', error);
     // Return a user-friendly error message to the client.
     return { success: false, message: error.message || 'An unexpected error occurred while getting a hint.' };
   }

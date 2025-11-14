@@ -113,7 +113,8 @@ export default function GameClient() {
   }, [wordData, gameState, guessedLetters, playSound, revealedByHint]);
 
   const getHint = async (isFree: boolean = false) => {
-    if (!wordData || (!user && !isFree)) {
+    if (!wordData) return;
+    if (!user && !isFree) {
         toast({
             variant: "destructive",
             title: "Login Required",
@@ -124,32 +125,13 @@ export default function GameClient() {
     
     startHintTransition(async () => {
       try {
-        let result;
-        if (isFree) {
-            // For a free hint from an ad, we only need to call the AI part.
-            // We can re-use the same server action but we need a way to bypass the payment.
-            // A simpler approach for now is to just call the AI directly.
-            // A better long-term solution would be a separate server action or parameter.
-            const { smartHintPrompt } = await import('@/ai/prompts');
-            const { output } = await smartHintPrompt({
-                word: wordData.word,
-                incorrectGuesses: guessedLetters.incorrect.join(''),
-                lettersToReveal: revealedByHint.length + 1,
-            });
-            result = { success: true, hint: output?.hint };
-
-        } else if(user) {
-           // For a paid hint, call the all-in-one server action
-           result = await useHintAction({
-            userId: user.uid,
+        const result = await useHintAction({
+            userId: user?.uid,
             word: wordData.word,
             incorrectGuesses: guessedLetters.incorrect.join(''),
             lettersToReveal: revealedByHint.length + 1,
-          });
-        } else {
-            // This case should be caught by the initial check, but for safety:
-            throw new Error("User not logged in.");
-        }
+            isFree: isFree,
+        });
 
         if (result && result.success && result.hint) {
           setHint(result.hint);
@@ -157,7 +139,6 @@ export default function GameClient() {
           setRevealedByHint(newHintedLetters);
           playSound('hint');
         } else {
-           // If the action failed, show the message from the server.
            throw new Error(result.message || "Invalid response from server.");
         }
       } catch (error: any) {

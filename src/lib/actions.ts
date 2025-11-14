@@ -24,45 +24,52 @@ function initAdminApp(): App {
 }
 
 export async function useHintAction(data: { 
-  userId: string;
+  userId?: string;
   word: string;
   incorrectGuesses: string;
   lettersToReveal: number;
+  isFree?: boolean;
 }): Promise<{ success: boolean; message?: string; hint?: string; }> {
   try {
     const ai = genkit({
       plugins: [
         googleAI({
-          apiVersion: 'v1', 
+          apiVersion: 'v1',
         }),
       ],
     });
 
-    initAdminApp();
-    const firestore = getFirestore();
-    const userProfileRef = firestore.collection('userProfiles').doc(data.userId);
+    if (!data.isFree) {
+        if (!data.userId) {
+            throw new Error("User ID is required for a paid hint.");
+        }
+        initAdminApp();
+        const firestore = getFirestore();
+        const userProfileRef = firestore.collection('userProfiles').doc(data.userId);
 
-    const transactionResult = await firestore.runTransaction(async (transaction) => {
-      const userDoc = await transaction.get(userProfileRef);
+        const transactionResult = await firestore.runTransaction(async (transaction) => {
+        const userDoc = await transaction.get(userProfileRef);
 
-      if (!userDoc.exists) {
-        throw new Error('User profile not found.');
-      }
+        if (!userDoc.exists) {
+            throw new Error('User profile not found.');
+        }
 
-      const currentHints = userDoc.data()?.hints ?? 0;
+        const currentHints = userDoc.data()?.hints ?? 0;
 
-      if (currentHints <= 0) {
-        return { success: false, message: "You don't have any hints left." };
-      }
+        if (currentHints <= 0) {
+            return { success: false, message: "You don't have any hints left." };
+        }
 
-      transaction.update(userProfileRef, { hints: currentHints - 1 });
-      
-      return { success: true };
-    });
+        transaction.update(userProfileRef, { hints: currentHints - 1 });
+        
+        return { success: true };
+        });
 
-    if (!transactionResult.success) {
-        return { success: false, message: transactionResult.message };
+        if (!transactionResult.success) {
+            return { success: false, message: transactionResult.message };
+        }
     }
+
 
     const hintResponse = await ai.generate({
         model: googleAI.model('gemini-1.5-flash'),

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useTransition } from "react";
@@ -10,7 +11,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useHintAction } from "@/lib/actions";
 import { requestSmartHint } from "@/lib/api/hints";
 import { requestGameSound } from "@/lib/api/sounds";
-//import { getSoundAction } from "@/ai/flows/game-sounds-flow";
 import { useSound } from "@/hooks/use-sound";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
@@ -68,7 +68,7 @@ export default function GameClient() {
   
   const playSound = useCallback(async (soundType: 'correct' | 'incorrect' | 'win' | 'hint' | 'click') => {
     try {
-      const sound = await getSoundAction({soundType});
+      const sound = await requestGameSound(soundType);
       if(sound?.media) {
         playSoundFromUrl(sound.media);
       }
@@ -99,6 +99,7 @@ export default function GameClient() {
   }, []);
 
   useEffect(() => {
+    // This ensures getWordByDifficulty (with Math.random) only runs on the client.
     startNewGame(level);
   }, [level, startNewGame]);
 
@@ -247,6 +248,11 @@ export default function GameClient() {
     }
   }, [guessedLetters, wordData, level, playSound, startNewGame, updateFirestoreUser, gameState, displayedWord, hint, revealedByHint]);
 
+  if (!wordData) {
+    // Render a loading state or null until the word is selected on the client
+    return <div className="text-center p-8">Loading your next case...</div>;
+  }
+  
   const incorrectTriesLeft = MAX_INCORRECT_TRIES - guessedLetters.incorrect.length;
   const allLettersGuessed = wordData && (wordData.word.length === (guessedLetters.correct.length + revealedByHint.length));
   const hintDisabled = isHintLoading || allLettersGuessed || !user || profileLoading;

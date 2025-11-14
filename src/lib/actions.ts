@@ -67,7 +67,7 @@ export async function useHintAction(data: {
 
     // If the transaction was successful, proceed to generate the AI hint.
     const hintResponse = await ai.generate({
-        model: 'googleai/gemini-1.5-flash',
+        model: 'gemini-1.5-flash',
         prompt: `
             You are an AI assistant for a word puzzle game. Your task is to provide a "smart hint".
             The user gives you a secret word, a string of letters they have already guessed incorrectly, and a number of letters to reveal.

@@ -1,29 +1,47 @@
 
 'use server';
 
-import { getApps, initializeApp, App } from 'firebase-admin/app';
+import { initializeApp, getApps, App, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
+import { genkit, z } from 'genkit';
+import { googleAI } from '@genkit-ai/google-genai';
 
 // Helper function to initialize the admin app if it hasn't been already.
 function initAdminApp(): App {
   if (getApps().length > 0) {
     return getApps()[0];
   }
-  // The FIREBASE_CONFIG env var is set automatically by App Hosting.
-  const firebaseConfig = JSON.parse(process.env.FIREBASE_CONFIG || '{}');
+
+  // Check if FIREBASE_CONFIG is available and parse it.
+  const firebaseConfig = process.env.FIREBASE_CONFIG ? JSON.parse(process.env.FIREBASE_CONFIG) : {};
   
+  // Use the parsed config to initialize the app.
+  // This is the standard way to initialize in App Hosting.
   return initializeApp({
-      projectId: firebaseConfig.projectId,
+    projectId: firebaseConfig.projectId,
   });
 }
 
-export async function useHintAction(data: { userId: string }): Promise<{ success: boolean; message?: string; }> {
+export async function useHintAction(data: { 
+  userId: string;
+  word: string;
+  incorrectGuesses: string;
+  lettersToReveal: number;
+}): Promise<{ success: boolean; message?: string; hint?: string; }> {
   try {
+    const ai = genkit({
+      plugins: [
+        googleAI({
+          apiVersion: 'v1', 
+        }),
+      ],
+    });
+
     initAdminApp();
     const firestore = getFirestore();
     const userProfileRef = firestore.collection('userProfiles').doc(data.userId);
-    
-    const result = await firestore.runTransaction(async (transaction) => {
+
+    const transactionResult = await firestore.runTransaction(async (transaction) => {
       const userDoc = await transaction.get(userProfileRef);
 
       if (!userDoc.exists) {
@@ -36,16 +54,58 @@ export async function useHintAction(data: { userId: string }): Promise<{ success
         return { success: false, message: "You don't have any hints left." };
       }
 
-      // Decrement the hints count by 1.
       transaction.update(userProfileRef, { hints: currentHints - 1 });
       
-      return { success: true, message: 'Hint used successfully.' };
+      return { success: true };
     });
 
-    return result;
+    if (!transactionResult.success) {
+        return { success: false, message: transactionResult.message };
+    }
+
+    const hintResponse = await ai.generate({
+        model: googleAI.model('gemini-1.5-flash'),
+        prompt: `
+            You are an AI assistant for a word puzzle game. Your task is to provide a "smart hint".
+            The user gives you a secret word, a string of letters they have already guessed incorrectly, and a number of letters to reveal.
+
+            Rules:
+            1.  Your response MUST be a JSON object with a single key: "hint".
+            2.  The value of "hint" should be a string representing the secret word.
+            3.  In this string, exactly ${data.lettersToReveal} letters of the secret word should be revealed.
+            4.  All other letters MUST be represented by an underscore "_".
+            5.  You MUST NOT reveal any letters that the user has already guessed incorrectly. Choose other letters to reveal.
+            
+            Here is the data for this request:
+            - Secret Word: "${data.word}"
+            - Incorrect Guesses: "${data.incorrectGuesses}"
+            - Letters to Reveal: ${data.lettersToReveal}
+
+            Produce the JSON response now.
+        `,
+        output: {
+            schema: z.object({
+                hint: z.string(),
+            }),
+            format: 'json',
+        },
+    });
+    
+    const hintOutput = hintResponse.output;
+
+    if (hintOutput?.hint) {
+      return { success: true, hint: hintOutput.hint };
+    }
+    
+    throw new Error('AI did not return a valid hint format.');
 
   } catch (error: any) {
-    console.error('Error in useHintAction:', error);
-    return { success: false, message: error.message || 'An unexpected error occurred while using a hint.' };
+    console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+    console.error('!!!!!!     HINT ACTION ERROR      !!!!!!');
+    console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+    console.error('Error in useHintAction:', JSON.stringify(error, null, 2));
+    console.error('Full Error Object:', error);
+    // Return a user-friendly error message to the client.
+    return { success: false, message: error.message || 'An unexpected error occurred while getting a hint.' };
   }
 }

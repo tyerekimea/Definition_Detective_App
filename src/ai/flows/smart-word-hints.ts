@@ -1,99 +1,83 @@
-
 'use server';
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
 /**
- * Input Schema — defines what the model receives.
+ * Input Schema
  */
 const SmartHintInputSchema = z.object({
-  word: z.string().describe('The word to provide a hint for.'),
-  incorrectGuesses: z.string().describe('A string of letters the player has already guessed incorrectly.'),
-  lettersToReveal: z.number().describe('The number of letters to reveal in the hint.'),
+  word: z.string(),
+  incorrectGuesses: z.string(),
+  lettersToReveal: z.number(),
 });
+
 export type SmartHintInput = z.infer<typeof SmartHintInputSchema>;
 
 /**
- * Output Schema — defines what the model returns.
+ * Output Schema
  */
 const SmartHintOutputSchema = z.object({
-  hint: z.string().describe('The smart hint, with revealed letters and underscores for the rest.'),
+  hint: z.string(),
 });
+
 export type SmartHintOutput = z.infer<typeof SmartHintOutputSchema>;
 
 /**
- * The AI prompt — guides Gemini on what to produce.
+ * Prompt
  */
 const smartHintPrompt = ai.definePrompt({
   name: 'smartHintPrompt',
   input: { schema: SmartHintInputSchema },
   output: { schema: SmartHintOutputSchema },
   prompt: `
-You are an AI assistant that helps players with smart word puzzle hints.
+You are an AI assistant helping with smart word puzzle hints.
 
-Given:
-- Word: "{{{word}}}"
-- Incorrect guesses: "{{{incorrectGuesses}}}"
-- Number of letters to reveal: "{{{lettersToReveal}}}"
+Word: "{{{word}}}"
+Incorrect guesses: "{{{incorrectGuesses}}}"
+Letters to reveal: "{{{lettersToReveal}}}"
 
 Rules:
-1. Reveal only the specified number of letters.
-2. Do not reveal letters that were guessed incorrectly.
-3. Replace unrevealed letters with underscores.
-4. Your response MUST be only the valid JSON object requested, like this example:
+- Reveal ONLY the requested number of letters.
+- Do NOT reveal letters in incorrect guesses.
+- Other letters must remain "_".
+- Return ONLY valid JSON:
 
-{
-  "hint": "e_a__p_e"
-}
+{ "hint": "e_a__p_e" }
 
-Now, generate the hint:
-`,
+Produce the hint now.
+  `,
 });
 
 /**
- * The flow — defines how the AI is called and what it returns.
+ * Flow
  */
-const smartHintFlow = ai.defineFlow(
+export const smartHint = ai.defineFlow(
   {
-    name: 'smartHintFlow',
+    name: 'smartHint',
     inputSchema: SmartHintInputSchema,
     outputSchema: SmartHintOutputSchema,
   },
   async (input) => {
     try {
-      const {output} = await smartHintPrompt(input);
+      const { output } = await smartHintPrompt(input);
 
-      if (!output?.hint) {
-         // If we don't get a valid hint object, try to parse it from a string.
-        if (typeof output === 'string') {
-          try {
-            const parsed = JSON.parse(output);
-            return { hint: parsed.hint || '' };
-          } catch (e) {
-             console.error('Failed to parse string response from AI', e);
-             throw new Error('AI returned an unparsable string.');
-          }
+      if (output?.hint) return output;
+
+      // If Gemini returns raw string instead of object
+      if (typeof output === 'string') {
+        try {
+          const parsed = JSON.parse(output);
+          return { hint: parsed.hint ?? '' };
+        } catch {
+          throw new Error('AI returned invalid JSON.');
         }
-        throw new Error('AI response did not contain a hint.');
       }
-      
-      return output;
 
-    } catch (error) {
-      console.error('❌ Smart hint flow failed:', error);
-      // Propagate a clear error to the action
-      throw new Error('Sorry, no hint available right now.');
+      throw new Error('AI did not return a valid hint.');
+    } catch (err) {
+      console.error('❌ Smart Hint Flow Error:', err);
+      throw new Error('Hint is not available right now.');
     }
   }
 );
-
-/**
- * Export a direct callable helper for your app logic.
- */
-export async function getSmartHint(input: SmartHintInput): Promise<SmartHintOutput> {
-  return smartHintFlow(input);
-}
-
-// ✅ Expose the flow to the app (required!)
-export const smartHint = smartHintFlow;

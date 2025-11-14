@@ -1,11 +1,14 @@
+// src/ai/genkit.ts
 import { genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/google-genai';
 
 export const ai = genkit({
   plugins: [
     googleAI({
-      apiVersion: 'v1beta', // ✅ Use v1beta for preview models like TTS
+      apiVersion: 'v1beta', // required for TTS + audio
     }),
   ],
-  model: 'googleai/gemini-1.5-flash', // ✅ Modern, supported model
+
+  // ❌ Do NOT set a "default model" here.
+  // All flows should specify their own model.
 });

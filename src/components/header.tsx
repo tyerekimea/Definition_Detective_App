@@ -1,8 +1,9 @@
+
 "use client";
 
 import Link from "next/link";
 import { Puzzle, LogIn, LogOut, User, Volume2, VolumeX, ShoppingCart } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth.tsx";
+import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {

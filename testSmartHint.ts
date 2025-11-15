@@ -1,11 +1,13 @@
+
 import 'dotenv/config';
-import { getSmartHint } from '@/ai/flows/smart-word-hints';
+import { useHintAction } from '@/lib/actions';
 
 async function testSmartHint() {
-  const result = await getSmartHint({
+  const result = await useHintAction({
     word: 'example',
     incorrectGuesses: 'xyz',
     lettersToReveal: 2,
+    isFree: true // Test as a free hint to bypass user auth
   });
 
   console.log('🧠 Smart Hint Output:', result);

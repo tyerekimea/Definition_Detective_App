@@ -1,8 +1,9 @@
+
 "use client";
 
 import type { FC, ReactNode } from "react";
 import { Toaster } from "@/components/ui/toaster";
-import { AuthProvider } from '@/hooks/use-auth.tsx';
+import { AuthProvider } from '@/hooks/use-auth';
 import { SoundProvider } from "@/hooks/use-sound";
 import { ThemeProvider } from "@/hooks/use-theme";
 

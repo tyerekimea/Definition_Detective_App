@@ -1,16 +1,22 @@
 
-import { genkit } from 'genkit';
+import { ai } from '@/ai/genkit';
 import { NextRequest, NextResponse } from 'next/server';
+import '@/ai/flows/game-sounds-flow';
 
 export async function POST(request: NextRequest) {
   try {
-    const { path, body } = await request.json();
+    const { flowId, input } = await request.json();
 
-    if (!path) {
-      return NextResponse.json({ error: 'Missing `path` parameter.' }, { status: 400 });
+    if (!flowId) {
+      return NextResponse.json({ error: 'Missing `flowId` parameter.' }, { status: 400 });
     }
 
-    const result = await genkit.run(path, body ?? {});
+    const flow = ai.lookup(flowId);
+    if (!flow) {
+        return NextResponse.json({ error: `Flow '${flowId}' not found.` }, { status: 404 });
+    }
+
+    const result = await ai.run(flow, input ?? {});
     return NextResponse.json(result, { status: 200 });
   } catch (err: any) {
     console.error('🔥 Error running Genkit flow:', err);

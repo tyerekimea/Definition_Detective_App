@@ -12,7 +12,7 @@ import { useHintAction } from "@/lib/actions";
 import { useGameSounds } from "@/hooks/use-game-sounds";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/hooks/use-auth.tsx";
+import { useAuth } from "@/hooks/use-auth";
 import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { doc, updateDoc, increment, getDoc, serverTimestamp } from "firebase/firestore";
 import { errorEmitter } from "@/firebase/error-emitter";
@@ -135,7 +135,7 @@ export default function GameClient() {
 
         if (result && result.success && result.hint) {
           setHint(result.hint);
-          const newHintedLetters = result.hint.split('').filter(char => char !== '_').map(char => char.toLowerCase());
+          const newHintedLetters = result.hint.split('').filter((char: string) => char !== '_').map((char: string) => char.toLowerCase());
           setRevealedByHint(newHintedLetters);
           playSound('hint');
         } else {

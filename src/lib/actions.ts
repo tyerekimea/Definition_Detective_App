@@ -74,7 +74,7 @@ export async function useHintAction(data: { 
     });
 
     // Define the correct model name for Genkit
-    const hintResponse = await ai.generate({
+    const hintResponse = await (ai as any).generate({
         model: googleAI.model('gemini-1.5-pro'), // <-- FIX: Changed to 'gemini-1.5-pro'
         prompt: `
             You are an AI assistant for a word puzzle game. Your task is to provide a "smart hint".
@@ -99,7 +99,7 @@ export async function useHintAction(data: { 
             responseSchema: hintSchema, // <-- Best practice for Genkit/Structured output
             responseMimeType: 'application/json',
         },
-    });
+    } as any);
     
     const hintOutput = hintResponse.output;
 

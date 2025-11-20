@@ -12,12 +12,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing `flowId` parameter.' }, { status: 400 });
     }
 
-    const flow = ai.lookup(flowId);
+    const flow = (ai as any).lookup(flowId);
     if (!flow) {
         return NextResponse.json({ error: `Flow '${flowId}' not found.` }, { status: 404 });
     }
 
-    const result = await ai.run(flow, input ?? {});
+    const result = await (ai as any).run(flow, input ?? {});
     return NextResponse.json(result, { status: 200 });
   } catch (err: any) {
     console.error('🔥 Error running Genkit flow:', err);

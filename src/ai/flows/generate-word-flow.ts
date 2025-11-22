@@ -1,10 +1,4 @@
-
 'use server';
-/**
- * @fileOverview A flow to generate a word and its definition for the game.
- *
- * - generateWord - A function that generates a new word puzzle.
- */
 
 import { ai } from '@/ai/genkit';
 import { googleAI } from '@genkit-ai/google-genai';
@@ -25,10 +19,14 @@ const prompt = ai.definePrompt({
   name: 'generateWordPrompt',
   input: { schema: GenerateWordInputSchema },
   output: { schema: GenerateWordOutputSchema },
-  model: googleAI.model('gemini-pro'),
+
+  // 🔥 FIXED — old: gemini-pro (no longer exists)
+  model: googleAI.model('gemini-1.5-flash'),
+
   generationConfig: {
     responseMimeType: 'application/json',
   },
+
   prompt: `You are an expert lexicographer and puzzle master for a word game.
 
 Your task is to generate a single word and its corresponding definition based on the requested difficulty level. The word should be challenging but fair for the given level.

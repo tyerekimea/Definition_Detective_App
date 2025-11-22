@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview A flow to generate a smart hint for the word puzzle game.
@@ -61,7 +60,8 @@ const generateHintFlow = ai.defineFlow(
     outputSchema: GenerateHintOutputSchema,
   },
   async input => {
-    const { output } = await prompt(input);
+    const response = await prompt(input);
+    const output = response.output;
     if (!output) {
       throw new Error('Failed to generate hint from AI.');
     }

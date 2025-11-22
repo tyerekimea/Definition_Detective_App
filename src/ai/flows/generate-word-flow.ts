@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview A flow to generate a word and its definition for the game.
@@ -57,7 +56,8 @@ const generateWordFlow = ai.defineFlow(
     outputSchema: GenerateWordOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
+    const response = await prompt(input);
+    const output = response.output;
     if (!output) {
       throw new Error('Failed to generate word from AI.');
     }

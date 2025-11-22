@@ -4,7 +4,7 @@
 import { initializeApp, getApps, App } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { generateHint } from '@/ai/flows/generate-hints';
-import type { GenerateHintInput } from '@/ai/flows/generate-hints';
+import type { GenerateHintInput } from '@/ai/schemas/hint';
 
 // Helper function to initialize the admin app if it hasn't been already.
 function initAdminApp(): App {

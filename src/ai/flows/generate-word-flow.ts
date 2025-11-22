@@ -3,26 +3,16 @@
  * @fileOverview A flow to generate a word and its definition for the game.
  *
  * - generateWord - A function that generates a new word puzzle.
- * - GenerateWordInput - The input type for the generateWord function.
- * - GenerateWordOutput - The return type for the generateWord function.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
-import {googleAI} from '@genkit-ai/google-genai';
-
-const GenerateWordInputSchema = z.object({
-  difficulty: z
-    .enum(['easy', 'medium', 'hard'])
-    .describe('The difficulty level for the word to be generated.'),
-});
-export type GenerateWordInput = z.infer<typeof GenerateWordInputSchema>;
-
-const GenerateWordOutputSchema = z.object({
-  word: z.string().describe('The generated word.'),
-  definition: z.string().describe('The definition of the generated word.'),
-});
-export type GenerateWordOutput = z.infer<typeof GenerateWordOutputSchema>;
+import { ai } from '@/ai/genkit';
+import { googleAI } from '@genkit-ai/google-genai';
+import {
+  GenerateWordInput,
+  GenerateWordOutput,
+  GenerateWordInputSchema,
+  GenerateWordOutputSchema,
+} from '@/ai/schemas/word';
 
 export async function generateWord(
   input: GenerateWordInput
@@ -32,8 +22,8 @@ export async function generateWord(
 
 const prompt = ai.definePrompt({
   name: 'generateWordPrompt',
-  input: {schema: GenerateWordInputSchema},
-  output: {schema: GenerateWordOutputSchema},
+  input: { schema: GenerateWordInputSchema },
+  output: { schema: GenerateWordOutputSchema },
   model: googleAI.model('gemini-1.5-pro'),
   generationConfig: {
     responseMimeType: 'application/json',

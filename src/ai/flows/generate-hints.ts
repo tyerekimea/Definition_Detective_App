@@ -1,9 +1,5 @@
+
 'use server';
-/**
- * @fileOverview A flow to generate a smart hint for the word puzzle game.
- *
- * - generateHint - A function that generates a hint.
- */
 
 import { ai } from '@/ai/genkit';
 import { geminiPro } from '@genkit-ai/google-genai';

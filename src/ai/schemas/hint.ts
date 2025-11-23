@@ -10,4 +10,4 @@ export type GenerateHintInput = z.infer<typeof GenerateHintInputSchema>;
 export const GenerateHintOutputSchema = z.object({
   hint: z.string().describe('The partially revealed word, using underscores for unrevealed letters.'),
 });
-export type GenerateHintOutput = z_infer<typeof GenerateHintOutputSchema>;
+export type GenerateHintOutput = z.infer<typeof GenerateHintOutputSchema>;

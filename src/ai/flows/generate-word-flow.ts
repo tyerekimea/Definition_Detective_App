@@ -42,8 +42,7 @@ const generateWordFlow = ai.defineFlow(
     outputSchema: GenerateWordOutputSchema,
   },
   async input => {
-    const response = await prompt(input);
-    const output = response.output;
+    const { output } = await prompt(input);
     if (!output) {
       throw new Error('Failed to generate word from AI.');
     }

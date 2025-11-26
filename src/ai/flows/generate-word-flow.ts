@@ -19,17 +19,7 @@ const prompt = ai.definePrompt({
   name: 'generateWordPrompt',
   input: { schema: GenerateWordInputSchema },
   output: { schema: GenerateWordOutputSchema },
-
-  // STABLE v1 model (explicit 'models/' prefix)
-  model: googleAI.model('models/gemini-1.5-pro'),
-
-  // Only v1-compatible generation fields (no responseMimeType)
-  generationConfig: {
-    temperature: 0.7,
-    maxOutputTokens: 256,
-    topP: 0.95,
-  },
-
+  model: googleAI.model('gemini-1.5-pro'),
   prompt: `You are an expert lexicographer and puzzle master for a word game.
 
 Your task is to generate a single word and its corresponding definition based on the requested difficulty level. The word should be challenging but fair for the given level.
@@ -38,7 +28,7 @@ Difficulty: {{{difficulty}}}
 
 The definition should be clear, concise, and in a dictionary style. Avoid overly obscure words unless the difficulty is 'hard'.
 
-Return a JSON object matching the required schema exactly.`,
+Produce the JSON response now.`,
 });
 
 const generateWordFlow = ai.defineFlow(
@@ -48,8 +38,7 @@ const generateWordFlow = ai.defineFlow(
     outputSchema: GenerateWordOutputSchema,
   },
   async input => {
-    const response = await prompt(input);
-    const output = response.output;
+    const { output } = await prompt(input);
     if (!output) {
       throw new Error('Failed to generate word from AI.');
     }

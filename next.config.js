@@ -17,20 +17,10 @@ const nextConfig = {
       },
     ],
   },
-  webpack: (config) => {
-    config.resolve.fallback = {
-      ...config.resolve.fallback,
-      // Used by Genkit
-      'uglify-js': false,
-      '@babel/core': false,
-      'node-gyp': false,
-      'node-pre-gyp': false,
-      'mock-aws-s3': false,
-      'aws-sdk': false,
-      'nock': false,
-    };
-    return config;
-  }
+  allowedDevOrigins: [
+    'https://*.cloudworkstations.dev',
+    'https://*.firebase.studio',
+  ],
 };
 
 // Use module.exports for .js files instead of export default

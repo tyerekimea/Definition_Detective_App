@@ -147,7 +147,7 @@ export default function Home() {
             word: wordData.word,
             incorrectGuesses: guessedLetters.incorrect.join(''),
             lettersToReveal: revealedByHint.length + 1,
-            isFree: isFree,
+            isFree,
         });
 
         if (result && result.success && result.hint) {

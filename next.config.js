@@ -1,8 +1,9 @@
 
-import type {NextConfig} from 'next';
+/** @type {import('next').NextConfig} */
+
 require('dotenv').config();
 
-const nextConfig: NextConfig = {
+const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -24,7 +25,7 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
       {
-        protocol: 'https' as const,
+        protocol: 'https',
         hostname: 'picsum.photos',
         port: '',
         pathname: '/**',
@@ -32,12 +33,13 @@ const nextConfig: NextConfig = {
     ],
   },
   experimental: {
-    allowedDevOrigins: [
-        "http://localhost:9003",
-        "https://*.cloudworkstations.dev",
-        "https://*.firebase.studio",
-    ]
-  }
+    // No longer need allowedDevOrigins here
+  },
+  allowedDevOrigins: [
+      "http://localhost:9003",
+      "https://*.cloudworkstations.dev",
+      "https://*.firebase.studio",
+  ]
 };
 
-export default nextConfig;
+module.exports = nextConfig;

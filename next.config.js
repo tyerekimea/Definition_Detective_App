@@ -1,12 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  allowedDevOrigins: [
-    'https://9000-firebase-studio-1761198320704.cluster-lu4mup47g5gm4rtyvhzpwbfadi.cloudworkstations.dev',
-    // It is good practice to add the other potential ports you might use too:
-    'https://9003-firebase-studio-1761198320704.cluster-lu4mup47g5gm4rtyvhzpwbfadi.cloudworkstations.dev',
-    'https://9002-firebase-studio-1761198320704.cluster-lu4mup47g5gm4rtyvhzpwbfadi.cloudworkstations.dev',
-  ],
   images: {
     remotePatterns: [
       {

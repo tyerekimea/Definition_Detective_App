@@ -4,6 +4,7 @@
 import { useState, useEffect, useCallback, useMemo, useTransition } from "react";
 import { type WordData, getRankForScore } from "@/lib/game-data";
 import { generateWord } from "@/ai/flows/generate-word-flow";
+import { generateImageDescription } from "@/ai/flows/generate-image-description-flow";
 import { useHintAction } from "@/lib/actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +12,7 @@ import { Keyboard } from "@/components/game/keyboard";
 import { Lightbulb, RotateCw, XCircle, Award, PartyPopper, Clapperboard, Share } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useGameSounds } from "@/hooks/use-game-sounds";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; 
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
@@ -48,6 +49,8 @@ export default function Home() {
   const [isHintLoading, startHintTransition] = useTransition();
   const [isWatchingAd, setIsWatchingAd] = useState(false);
   const [adProgress, setAdProgress] = useState(0);
+  const [visualHint, setVisualHint] = useState<string | null>(null);
+  const [isVisualHintLoading, setIsVisualHintLoading] = useState(false);
 
   const { playSound } = useGameSounds();
 
@@ -105,6 +108,7 @@ export default function Home() {
         setGuessedLetters({ correct: [], incorrect: [] });
         setHint(null);
         setRevealedByHint([]);
+        setVisualHint(null);
     }
     setIsGameLoading(false);
   }, [toast]);
@@ -115,11 +119,12 @@ export default function Home() {
 
 
   const handleGuess = useCallback((letter: string) => {
-    if (gameState !== "playing" || guessedLetters.correct.includes(letter) || guessedLetters.incorrect.includes(letter) || revealedByHint.includes(letter.toLowerCase())) {
+    const lowerLetter = letter.toLowerCase();
+
+    if (gameState !== "playing" || guessedLetters.correct.includes(lowerLetter) || guessedLetters.incorrect.includes(lowerLetter) || revealedByHint.includes(lowerLetter)) {
       return;
     }
 
-    const lowerLetter = letter.toLowerCase();
     if (wordData?.word.toLowerCase().includes(lowerLetter)) {
       setGuessedLetters(prev => ({ ...prev, correct: [...prev.correct, lowerLetter] }));
       playSound('correct');
@@ -191,10 +196,26 @@ export default function Home() {
     }, 300);
   };
 
-  const displayedWord = useMemo(() => {
+  const getVisualHint = async () => {
+    if (!wordData) return;
+    setIsVisualHintLoading(true);
+    try {
+      const result = await generateImageDescription({ word: wordData.word });
+      setVisualHint(result.description);
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Visual Hint Error",
+        description: "Failed to generate visual description.",
+      });
+    }
+    setIsVisualHintLoading(false);
+  };
+
+  const displayedWord = useMemo<{ char: string; revealed: boolean }[]>(() => {
     if (!wordData) return [];
     const wordChars = wordData.word.split('');
-    return wordChars.map((char) => {
+    return wordChars.map((char: string) => {
       const lowerChar = char.toLowerCase();
       const isGuessed = guessedLetters.correct.includes(lowerChar);
       const isHinted = revealedByHint.includes(lowerChar);
@@ -298,6 +319,15 @@ export default function Home() {
               </CardContent>
           </Card>
 
+          {visualHint && (
+            <Card className="bg-muted/30 border-dashed">
+              <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Visual Clue</CardTitle></CardHeader>
+              <CardContent>
+                <p className="italic">{visualHint}</p>
+              </CardContent>
+            </Card>
+          )}
+
           <div className="flex justify-center items-center gap-2 md:gap-4 my-8">
               {displayedWord.map(({ char, revealed }, index) => (
               <div key={index} className="flex items-center justify-center h-12 w-12 md:h-16 md:w-16 border-b-4 border-primary text-3xl md:text-4xl font-bold uppercase bg-muted/30 rounded-md">
@@ -326,7 +356,7 @@ export default function Home() {
               </Alert>
           ) : (
               <>
-              <div className="flex justify-center gap-4">
+              <div className="flex flex-wrap justify-center gap-4">
                   <Button onClick={() => getHint(false)} disabled={hintDisabled}>
                   <Lightbulb className={cn("mr-2 h-4 w-4", isHintLoading && !isWatchingAd && "animate-spin")} />
                   {isHintLoading && !isWatchingAd ? 'Getting Hint...' : 'Use a Hint'}
@@ -334,6 +364,10 @@ export default function Home() {
                   <Button onClick={handleRewardedAd} disabled={isHintLoading || allLettersGuessed} variant="outline">
                   <Clapperboard className={cn("mr-2 h-4 w-4", isWatchingAd && "animate-spin")} />
                   {isWatchingAd ? 'Loading Ad...' : 'Watch Ad for Hint'}
+                  </Button>
+                  <Button onClick={getVisualHint} disabled={isVisualHintLoading || !!visualHint} variant="secondary">
+                    <Share className={cn("mr-2 h-4 w-4", isVisualHintLoading && "animate-spin")} />
+                    {isVisualHintLoading ? 'Generating...' : 'Visual Clue'}
                   </Button>
               </div>
               {!user && <p className="text-center text-sm text-muted-foreground">Please log in to use hints and save progress.</p>}

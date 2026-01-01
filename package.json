@@ -13,8 +13,10 @@
   },
   "type": "module",
   "dependencies": {
+    "@genkit-ai/ai": "^1.27.0",
+    "@genkit-ai/core": "^1.27.0",
     "@genkit-ai/google-genai": "^1.0.0",
-    "@genkit-ai/next": "^1.0.0",
+    "@genkit-ai/next": "^1.27.0",
     "@hookform/resolvers": "^3.9.0",
     "@radix-ui/react-accordion": "^1.2.0",
     "@radix-ui/react-alert-dialog": "^1.1.1",
@@ -44,13 +46,13 @@
     "embla-carousel-react": "^8.1.7",
     "firebase": "^10.12.4",
     "firebase-admin": "^12.2.0",
-    "genkit": "^1.0.0",
+    "genkit": "^1.27.0",
     "lucide-react": "^0.417.0",
-    "next": "15.5.9",
+    "next": "latest",
     "patch-package": "^8.0.0",
-    "react": "18.3.1",
+    "react": "latest",
     "react-day-picker": "^8.10.1",
-    "react-dom": "18.3.1",
+    "react-dom": "latest",
     "react-hook-form": "^7.52.1",
     "recharts": "^2.12.7",
     "tailwind-merge": "^2.4.0",
@@ -69,6 +71,7 @@
     "genkit-cli": "^1.0.0",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "^5"
   }
 }

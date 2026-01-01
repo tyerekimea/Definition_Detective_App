@@ -49,7 +49,11 @@ const generateWordFlow = ai.defineFlow(
       .split(',')
       .map(s => s.trim())
       .filter(Boolean);
-    const defaultCandidates = ['models/gemini-1.5-pro', 'models/text-bison-001'];
+    const defaultCandidates = [
+      'googleai/gemini-1.5-flash',
+      'googleai/gemini-1.5-pro',
+      'googleai/gemini-pro'
+    ];
     const candidates = [
       ...(explicit ? [explicit] : []),
       ...listFromEnv,

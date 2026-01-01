@@ -272,16 +272,18 @@ export default function Home() {
       }
       setScore(s => s + scoreGained);
       
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         setLevel(newLevel);
         startNewGame(newLevel, wordData.word);
       }, 3000);
+      
+      return () => clearTimeout(timeoutId);
   
     } else if (guessedLetters.incorrect.length >= MAX_INCORRECT_TRIES) {
       setGameState("lost");
       playSound('incorrect');
     }
-  }, [guessedLetters, wordData, level, playSound, startNewGame, updateFirestoreUser, gameState, displayedWord, hint, revealedByHint, user]);
+  }, [guessedLetters, wordData, level, playSound, startNewGame, updateFirestoreUser, gameState, displayedWord, user]);
 
   const gameContent = () => {
     if (isGameLoading || !wordData) {

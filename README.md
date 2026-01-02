@@ -72,6 +72,18 @@ If you see errors like "Model not found" or "AI model request failed":
 3. Check that you have billing enabled on your Google Cloud project (if required)
 
 The app will automatically try multiple model variants:
-- `googleai/gemini-1.5-flash` (fastest, recommended)
-- `googleai/gemini-1.5-pro` (more capable)
+- `googleai/gemini-1.5-flash-latest` (fastest, recommended)
+- `googleai/gemini-1.5-pro-latest` (more capable)
+- `googleai/gemini-2.0-flash-exp` (experimental)
 - `googleai/gemini-pro` (fallback)
+
+### Firebase Errors
+
+If you see Firebase authentication or Firestore errors:
+
+1. The game's core functionality works without Firebase (word generation, gameplay)
+2. Firebase is only needed for user accounts, scores, and leaderboards
+3. To enable Firebase features, see [FIREBASE_SETUP.md](./FIREBASE_SETUP.md)
+4. You can play the game without Firebase - just ignore the console warnings
+
+For detailed Firebase setup instructions, see **[FIREBASE_SETUP.md](./FIREBASE_SETUP.md)**

@@ -6,46 +6,49 @@ This guide provides step-by-step instructions to add monetization to Definition 
 
 ---
 
-## Step 1: Set Up Stripe (Payment Processing)
+## Step 1: Set Up Paystack (Payment Processing)
 
-### 1.1 Create Stripe Account
-1. Go to https://stripe.com
-2. Sign up for an account
-3. Complete verification
-4. Get your API keys from Dashboard
+### 1.1 Use Your Pre-Approved Paystack Account
+1. Login to https://dashboard.paystack.com/
+2. You already have a pre-approved account ready to use!
+3. Get your API keys from Settings > API Keys & Webhooks
 
 ### 1.2 Install Dependencies
 ```bash
-npm install stripe @stripe/stripe-js @stripe/react-stripe-js
+npm install react-paystack axios
 ```
 
 ### 1.3 Add Environment Variables
 Add to `.env.local`:
 ```bash
-# Stripe Keys
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
-STRIPE_SECRET_KEY=sk_test_...
-STRIPE_WEBHOOK_SECRET=whsec_...
+# Paystack Keys
+NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY=pk_test_...
+PAYSTACK_SECRET_KEY=sk_test_...
 
-# Stripe Price IDs (create these in Stripe Dashboard)
-NEXT_PUBLIC_STRIPE_PRICE_MONTHLY=price_...
-NEXT_PUBLIC_STRIPE_PRICE_YEARLY=price_...
+# App URL
+NEXT_PUBLIC_APP_URL=http://localhost:9003
 ```
 
-### 1.4 Create Stripe Products
-In Stripe Dashboard:
-1. Go to Products
-2. Create "Premium Monthly" - $4.99/month recurring
-3. Create "Premium Yearly" - $39.99/year recurring
-4. Create "5 Hints" - $0.99 one-time
-5. Create "20 Hints" - $2.99 one-time
-6. Copy the Price IDs to your `.env.local`
+### 1.4 Pricing (Nigerian Naira)
+**Subscriptions:**
+- Premium Monthly: ₦2,000/month (~$2.50 USD)
+- Premium Yearly: ₦20,000/year (~$25 USD)
+
+**Hint Packs:**
+- 5 Hints: ₦500
+- 20 Hints: ₦1,500
+- 50 Hints: ₦3,000
+- 100 Hints: ₦5,000
+
+*Prices can be adjusted for your target market*
 
 ---
 
 ## Step 2: Implement Subscription System
 
-### 2.1 Create Stripe Utility
+**Note:** For complete Paystack integration code, see `PAYSTACK_INTEGRATION.md`
+
+### 2.1 Create Paystack Utility
 Create `src/lib/stripe.ts`:
 ```typescript
 import Stripe from 'stripe';

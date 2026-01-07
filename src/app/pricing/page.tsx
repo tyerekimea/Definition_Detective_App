@@ -71,7 +71,7 @@ export default function PricingPage() {
             </div>
             <CardDescription>Most popular choice</CardDescription>
             <div className="mt-4">
-              <span className="text-4xl font-bold">$4.99</span>
+              <span className="text-4xl font-bold">₦2,000</span>
               <span className="text-muted-foreground">/month</span>
             </div>
           </CardHeader>
@@ -125,10 +125,10 @@ export default function PricingPage() {
             </div>
             <CardDescription>Save 33% annually</CardDescription>
             <div className="mt-4">
-              <span className="text-4xl font-bold">$39.99</span>
+              <span className="text-4xl font-bold">₦20,000</span>
               <span className="text-muted-foreground">/year</span>
               <div className="text-sm text-green-600 mt-1 font-medium">
-                Save $20 vs monthly
+                Save ₦4,000 vs monthly
               </div>
             </div>
           </CardHeader>
@@ -177,10 +177,10 @@ export default function PricingPage() {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { hints: 5, price: 0.99, discount: null },
-            { hints: 20, price: 2.99, discount: '25% off' },
-            { hints: 50, price: 5.99, discount: '40% off' },
-            { hints: 100, price: 9.99, discount: '50% off' },
+            { hints: 5, price: 500, discount: null },
+            { hints: 20, price: 1500, discount: '25% off' },
+            { hints: 50, price: 3000, discount: '40% off' },
+            { hints: 100, price: 5000, discount: '50% off' },
           ].map((pack) => (
             <Card key={pack.hints} className="text-center">
               <CardHeader className="pb-3">
@@ -193,7 +193,7 @@ export default function PricingPage() {
                 )}
               </CardHeader>
               <CardContent className="pb-3">
-                <div className="text-2xl font-bold">${pack.price}</div>
+                <div className="text-2xl font-bold">₦{pack.price.toLocaleString()}</div>
               </CardContent>
               <CardFooter className="pt-0">
                 <Button size="sm" variant="outline" className="w-full" asChild>
@@ -220,7 +220,7 @@ export default function PricingPage() {
           <div>
             <h3 className="font-semibold text-lg mb-2">What payment methods do you accept?</h3>
             <p className="text-muted-foreground">
-              We accept all major credit cards (Visa, Mastercard, American Express) through our secure payment processor, Stripe.
+              We accept all major credit/debit cards, bank transfers, USSD, and mobile money through our secure payment processor, Paystack.
             </p>
           </div>
 
@@ -256,7 +256,7 @@ export default function PricingPage() {
 
       {/* Trust Signals */}
       <div className="mt-16 text-center text-sm text-muted-foreground">
-        <p>🔒 Secure payment processing by Stripe</p>
+        <p>🔒 Secure payment processing by Paystack</p>
         <p className="mt-2">💯 30-day money-back guarantee</p>
         <p className="mt-2">📧 Email support: support@definitiondetective.com</p>
       </div>

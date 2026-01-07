@@ -86,7 +86,10 @@ export function PaystackButton({
       return;
     }
 
-    initializePayment(handleSuccess, handleClose);
+    initializePayment({
+      onSuccess: handleSuccess,
+      onClose: handleClose,
+    });
   };
 
   return (

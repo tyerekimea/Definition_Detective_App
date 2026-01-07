@@ -21,6 +21,10 @@
   },
   "type": "module",
   "dependencies": {
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/cli": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/ios": "^8.0.0",
     "@genkit-ai/ai": "^1.27.0",
     "@genkit-ai/core": "^1.27.0",
     "@genkit-ai/google-genai": "^1.0.0",

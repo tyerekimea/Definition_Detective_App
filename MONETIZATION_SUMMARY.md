@@ -129,21 +129,21 @@ Your Definition Detective game now has a complete monetization strategy ready to
 
 ## 🎬 Quick Start Guide
 
-### Step 1: Set Up Stripe (30 minutes)
-1. Create account at https://stripe.com
-2. Get API keys
+### Step 1: Set Up Paystack (15 minutes)
+1. Login to your pre-approved account at https://dashboard.paystack.com/
+2. Get API keys from Settings > API Keys & Webhooks
 3. Add to `.env.local`:
    ```bash
-   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
-   STRIPE_SECRET_KEY=sk_test_...
+   NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY=pk_test_...
+   PAYSTACK_SECRET_KEY=sk_test_...
    ```
-4. Create products in Stripe Dashboard
+4. Set up webhook URL in dashboard
 
 ### Step 2: Implement Payments (2-3 hours)
-1. Install dependencies: `npm install stripe @stripe/stripe-js`
-2. Copy code from MONETIZATION_IMPLEMENTATION.md
-3. Create API routes for checkout and webhooks
-4. Test with Stripe test cards
+1. Install dependencies: `npm install react-paystack axios`
+2. Follow PAYSTACK_INTEGRATION.md guide
+3. Create API routes for payment initialization and verification
+4. Test with Paystack test cards
 
 ### Step 3: Add Ads (1-2 hours)
 1. Apply for Google AdSense
@@ -213,14 +213,15 @@ Your Definition Detective game now has a complete monetization strategy ready to
 - **Game:** http://localhost:9003/
 
 ### External Services
-- **Stripe Dashboard:** https://dashboard.stripe.com/
+- **Paystack Dashboard:** https://dashboard.paystack.com/
 - **Google AdSense:** https://www.google.com/adsense/
 - **Firebase Console:** https://console.firebase.google.com/
 
 ### Documentation
 - **Full Strategy:** MONETIZATION_STRATEGY.md
 - **Implementation Guide:** MONETIZATION_IMPLEMENTATION.md
-- **Stripe Docs:** https://stripe.com/docs
+- **Paystack Integration:** PAYSTACK_INTEGRATION.md
+- **Paystack Docs:** https://paystack.com/docs
 - **AdSense Help:** https://support.google.com/adsense/
 
 ---

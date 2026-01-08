@@ -42,10 +42,43 @@ const generateHintFlow = ai.defineFlow(
     outputSchema: GenerateHintOutputSchema,
   },
   async input => {
-    const { output } = await prompt(input);
-    if (!output) {
-      throw new Error('Failed to generate hint from AI.');
+    // Try multiple model candidates
+    const defaultCandidates = [
+      'googleai/gemini-2.0-flash-exp',      // Working! (Experimental)
+      'googleai/gemini-1.5-flash',          // Try without -latest
+      'googleai/gemini-1.5-pro',            // Try without -latest
+      'googleai/gemini-pro'                 // Stable fallback
+    ];
+
+    let lastErr: any = null;
+    for (const candidate of defaultCandidates) {
+      try {
+        console.debug('[generateHintFlow] trying model candidate:', candidate);
+        const { output } = await prompt(input, { model: candidate });
+        if (!output) {
+          lastErr = new Error('AI returned no output.');
+          continue;
+        }
+        console.debug('[generateHintFlow] model worked:', candidate);
+        return output;
+      } catch (err: any) {
+        lastErr = err;
+        const msg = err?.originalMessage ?? err?.message ?? String(err);
+        const notFound = /not found/i.test(msg) || /NOT_FOUND/.test(msg);
+        if (notFound) {
+          console.debug('[generateHintFlow] model not found:', candidate, '— trying next');
+          continue;
+        }
+        // For other errors, throw immediately
+        throw new Error(`AI hint generation failed for model "${candidate}": ${msg}`);
+      }
     }
-    return output;
+
+    // If we get here, all models failed
+    const tried = defaultCandidates.join(', ');
+    const finalMsg = lastErr?.originalMessage ?? lastErr?.message ?? String(lastErr ?? 'no response');
+    throw new Error(
+      `AI hint generation failed — tried models: [${tried}]. Last error: ${finalMsg}`
+    );
   }
 );

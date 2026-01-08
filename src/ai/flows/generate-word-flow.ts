@@ -50,10 +50,10 @@ const generateWordFlow = ai.defineFlow(
       .map(s => s.trim())
       .filter(Boolean);
     const defaultCandidates = [
-      'googleai/gemini-1.5-flash-latest',
-      'googleai/gemini-1.5-pro-latest',
-      'googleai/gemini-2.0-flash-exp',
-      'googleai/gemini-pro'
+      'googleai/gemini-2.0-flash-exp',      // Working! (Experimental)
+      'googleai/gemini-1.5-flash',          // Try without -latest
+      'googleai/gemini-1.5-pro',            // Try without -latest
+      'googleai/gemini-pro'                 // Stable fallback
     ];
     const candidates = [
       ...(explicit ? [explicit] : []),

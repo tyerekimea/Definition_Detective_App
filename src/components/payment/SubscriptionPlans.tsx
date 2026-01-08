@@ -171,6 +171,7 @@ export function SubscriptionPlans() {
           </Card>
         );
       })}
+      </div>
     </div>
   );
 }

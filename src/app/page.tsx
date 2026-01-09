@@ -158,6 +158,7 @@ export default function Home() {
         const result = await useHintAction({
             userId: user ? user.uid : null,
             word: wordData.word,
+            wordLength: wordData.word.length,
             incorrectGuesses: guessedLetters.incorrect.join(''),
             lettersToReveal: revealedByHint.length + 1,
             isFree,

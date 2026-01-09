@@ -55,10 +55,13 @@ export async function useHintAction(data: GenerateHintInput & { userId?: string 
       }
     }
 
-    const hintResult = await generateHint(data);
+    const hintResult = await generateHint({
+      ...data,
+      wordLength: data.word.length,
+    });
     
     if (hintResult && hintResult.hint) {
-      return { success: true, hint: hintResult.hint };
+      return { success: true, ...hintResult };
     }
     
     throw new Error('AI did not return a valid hint format.');

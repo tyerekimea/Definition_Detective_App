@@ -17,15 +17,23 @@ export async function generateWord(
 const prompt = ai.definePrompt({
   name: 'generateWordPrompt',
   input: { schema: GenerateWordInputSchema },
-  output: { schema: GenerateWordOutputSchema },
+  output: { schema: GenerateWordOutputSchema, format: 'json' },
   prompt: `You are an expert lexicographer and puzzle master for a word game.
 
 Your task is to generate a single word and its corresponding definition based on the requested difficulty level.
 
 Difficulty: {{{difficulty}}}
 
+Guidelines:
+- For "easy": Use common words (5-7 letters) that most people know
+- For "medium": Use moderately challenging words (7-10 letters)
+- For "hard": Use advanced vocabulary words (10+ letters)
+
 The definition should be clear, concise, and dictionary-style.
-Avoid overly obscure words unless the difficulty is "hard".`,
+
+Return a JSON object with:
+- word: the target word (lowercase, no spaces)
+- definition: a clear, concise definition`,
 });
 
 const generateWordFlow = ai.defineFlow(

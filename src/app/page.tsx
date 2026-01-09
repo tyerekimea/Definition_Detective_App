@@ -97,12 +97,17 @@ export default function Home() {
         if (!newWordData) {
             throw new Error("Failed to generate a new word after 3 attempts.");
         }
-    } catch (error) {
+    } catch (error: any) {
         console.error("[startNewGame] Failed to generate word:", error);
+        console.error("[startNewGame] Error details:", {
+            message: error?.message,
+            stack: error?.stack,
+            name: error?.name
+        });
         toast({
             variant: "destructive",
-            title: "Connection Error",
-            description: "Could not generate a new word. Please check your connection and API key."
+            title: "Word Generation Error",
+            description: error?.message || "Could not generate a new word. Please check your connection and API key."
         });
         newWordData = null;
     }

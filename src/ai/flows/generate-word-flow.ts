@@ -43,11 +43,6 @@ const generateWordFlow = ai.defineFlow(
     outputSchema: GenerateWordOutputSchema,
   },
   async input => {
-    const apiKey = process.env.GOOGLE_GENAI_API_KEY?.trim();
-    if (!apiKey || apiKey.startsWith('your_')) {
-      throw new Error('Server configuration error: Invalid Google API key.');
-    }
-
     // Build prioritized candidate list:
     // 1) explicit `GOOGLE_GENAI_MODEL`
     // 2) comma-separated `GOOGLE_GENAI_MODEL_CANDIDATES`
@@ -58,6 +53,10 @@ const generateWordFlow = ai.defineFlow(
       .map(s => s.trim())
       .filter(Boolean);
     const defaultCandidates = [
+      // OpenAI models - best for word generation
+      'openai/gpt-4o-mini',                 // Fast, cheap, reliable
+      'openai/gpt-4o',                      // High quality
+      // Gemini models - fallback
       'googleai/gemini-2.0-flash-exp',      // Working! (Experimental)
       'googleai/gemini-1.5-flash',          // Try without -latest
       'googleai/gemini-1.5-pro',            // Try without -latest

@@ -72,6 +72,10 @@ const generateHintFlow = ai.defineFlow(
   async input => {
     // Try multiple model candidates
     const defaultCandidates = [
+      // OpenAI models - best for precise instructions
+      'openai/gpt-4o-mini',                 // Fast, cheap, reliable
+      'openai/gpt-4o',                      // High quality
+      // Gemini models - fallback
       'googleai/gemini-2.0-flash-exp',      // Working! (Experimental)
       'googleai/gemini-1.5-flash',          // Try without -latest
       'googleai/gemini-1.5-pro',            // Try without -latest

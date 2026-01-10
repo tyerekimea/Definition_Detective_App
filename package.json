@@ -10,6 +10,7 @@
     "lint": "next lint",
     "test": "jest",
     "test:watch": "jest --watch",
+    "test:openai": "tsx test-openai.ts",
     "typecheck": "tsc --noEmit",
     "genkit:dev": "genkit start -- tsx studio/src/ai/dev.ts",
     "genkit:watch": "genkit start -- tsx --watch studio/src/ai/dev.ts",

@@ -66,6 +66,7 @@
     "firebase": "^10.12.4",
     "firebase-admin": "^12.2.0",
     "genkit": "^1.27.0",
+    "genkitx-openai": "^0.29.0",
     "lucide-react": "^0.417.0",
     "next": "latest",
     "patch-package": "^8.0.0",

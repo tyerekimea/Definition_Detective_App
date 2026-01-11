@@ -34,8 +34,19 @@ export default function SubscribePage() {
       <div className="text-center mb-12">
         <h1 className="text-4xl font-bold mb-4">Upgrade to Premium</h1>
         <p className="text-xl text-muted-foreground">
-          Unlock unlimited hints and remove ads
+          Unlock themed word generation, unlimited hints, and ad-free experience
         </p>
+        <div className="flex justify-center gap-4 mt-4 text-sm">
+          <span className="inline-flex items-center gap-1">
+            🔬 Science Safari
+          </span>
+          <span className="inline-flex items-center gap-1">
+            🏛️ History Quest
+          </span>
+          <span className="inline-flex items-center gap-1">
+            🌍 Geo Genius
+          </span>
+        </div>
       </div>
 
       <SubscriptionPlans />

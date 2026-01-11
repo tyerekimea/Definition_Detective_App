@@ -520,8 +520,8 @@ export default function Home() {
             }}
             isPremium={isPremium}
             onUpgradeClick={() => {
-              // Navigate to payment page
-              window.location.href = '/payment';
+              // Navigate to subscription page with Paystack payment
+              window.location.href = '/subscribe';
             }}
           />
         </div>

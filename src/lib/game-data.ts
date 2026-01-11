@@ -1,8 +1,42 @@
+export type WordTheme = 
+  | 'current'           // Default theme - general vocabulary
+  | 'science-safari'    // Biological sciences, space, ecosystems
+  | 'history-quest'     // Ancient civilizations, historical figures
+  | 'geo-genius';       // Countries, capitals, landmarks
+
 export type WordData = {
   word: string;
   definition: string;
   difficulty: 'easy' | 'medium' | 'hard';
+  theme?: WordTheme;
 };
+
+export const WORD_THEMES = {
+  'current': {
+    name: 'Current Theme',
+    description: 'General vocabulary',
+    icon: '📚',
+    premium: false,
+  },
+  'science-safari': {
+    name: 'Science Safari',
+    description: 'Biological sciences, space, and ecosystems',
+    icon: '🔬',
+    premium: true,
+  },
+  'history-quest': {
+    name: 'History Quest',
+    description: 'Ancient civilizations, historical figures, and artifacts',
+    icon: '🏛️',
+    premium: true,
+  },
+  'geo-genius': {
+    name: 'Geo Genius',
+    description: 'Countries, capitals, and landmarks',
+    icon: '🌍',
+    premium: true,
+  },
+} as const;
 
 // This static list is no longer used for gameplay but is kept as a fallback or for reference.
 export const wordList: WordData[] = [

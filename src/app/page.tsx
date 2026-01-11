@@ -2,10 +2,11 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useTransition, useRef } from "react";
-import { type WordData, getRankForScore } from "@/lib/game-data";
+import { type WordData, type WordTheme, getRankForScore } from "@/lib/game-data";
 import { generateWord } from "@/ai/flows/generate-word-flow";
 import { generateImageDescription } from "@/ai/flows/generate-image-description-flow";
-import { useHintAction } from "@/lib/actions";
+import { useHintAction, generateWordWithTheme, updateUserTheme, getUserTheme } from "@/lib/actions";
+import { ThemeSelector } from "@/components/theme-selector";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Keyboard } from "@/components/game/keyboard";
@@ -52,6 +53,8 @@ export default function Home() {
   const [visualHint, setVisualHint] = useState<string | null>(null);
   const [isVisualHintLoading, setIsVisualHintLoading] = useState(false);
   const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [selectedTheme, setSelectedTheme] = useState<WordTheme>('current');
+  const [isPremium, setIsPremium] = useState(false);
 
   const { playSound } = useGameSounds();
 
@@ -85,20 +88,31 @@ export default function Home() {
     try {
         let attempts = 0;
         while(attempts < 3) { 
-            console.log(`[startNewGame] Attempt ${attempts + 1} to generate word...`);
+            console.log(`[startNewGame] Attempt ${attempts + 1} to generate word with theme:`, selectedTheme);
             try {
-                const result = await generateWord({ difficulty });
+                // Use new word generation with theme and used words tracking
+                const result = await generateWordWithTheme({
+                    difficulty,
+                    theme: selectedTheme,
+                    userId: user?.uid || null,
+                });
+                
                 console.log('[startNewGame] Generated word result:', result);
                 
-                if (!result || !result.word) {
-                    console.error('[startNewGame] Invalid result from generateWord:', result);
+                if (!result.success || !result.word) {
+                    console.error('[startNewGame] Invalid result from generateWordWithTheme:', result);
                     attempts++;
                     continue;
                 }
                 
                 console.log('[startNewGame] Generated word:', result.word);
                 if (result.word.toLowerCase() !== currentWord?.toLowerCase()) {
-                    newWordData = { ...result, difficulty };
+                    newWordData = { 
+                        word: result.word, 
+                        definition: result.definition || '', 
+                        difficulty,
+                        theme: selectedTheme 
+                    };
                     break;
                 }
                 console.log('[startNewGame] Word matches previous, trying again...');
@@ -142,7 +156,17 @@ export default function Home() {
     }
     setIsGameLoading(false);
     console.log('[startNewGame] Game loading complete');
-  }, [toast]);
+  }, [toast, selectedTheme, user]);
+
+  // Load user's theme preference
+  useEffect(() => {
+    if (user?.uid) {
+      getUserTheme(user.uid).then(({ theme, isPremium: premium }) => {
+        setSelectedTheme(theme);
+        setIsPremium(premium);
+      });
+    }
+  }, [user]);
 
   useEffect(() => {
     startNewGame(1);
@@ -480,6 +504,29 @@ export default function Home() {
           Unscramble the definition and guess the word. Put your vocabulary to the test!
         </p>
       </div>
+
+      {/* Theme Selector */}
+      {user && (
+        <div className="w-full max-w-md">
+          <ThemeSelector
+            selectedTheme={selectedTheme}
+            onThemeChange={async (theme) => {
+              setSelectedTheme(theme);
+              if (user?.uid) {
+                await updateUserTheme({ userId: user.uid, theme });
+                // Restart game with new theme
+                await startNewGame(level);
+              }
+            }}
+            isPremium={isPremium}
+            onUpgradeClick={() => {
+              // Navigate to payment page
+              window.location.href = '/payment';
+            }}
+          />
+        </div>
+      )}
+
       {gameContent()}
       
       <AlertDialog open={isWatchingAd}>

@@ -84,26 +84,35 @@ export function ThemeSelector({
       <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Premium Feature</DialogTitle>
+            <DialogTitle>🎓 Premium Word Themes</DialogTitle>
             <DialogDescription>
-              Word themes are a premium feature. Upgrade to unlock all themes and enhance your
-              learning experience!
+              Unlock themed word generation to focus your learning! Choose from science, history, or geography themes.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
               <h4 className="font-medium">Premium Themes Include:</h4>
-              <ul className="space-y-1 text-sm text-muted-foreground">
+              <ul className="space-y-2 text-sm">
                 {(Object.entries(WORD_THEMES) as [WordTheme, typeof WORD_THEMES[WordTheme]][])
                   .filter(([_, theme]) => theme.premium)
                   .map(([key, theme]) => (
-                    <li key={key} className="flex items-center gap-2">
-                      <span>{theme.icon}</span>
-                      <span>
-                        <strong>{theme.name}:</strong> {theme.description}
-                      </span>
+                    <li key={key} className="flex items-start gap-2 p-2 rounded-lg bg-muted/50">
+                      <span className="text-2xl">{theme.icon}</span>
+                      <div>
+                        <div className="font-medium">{theme.name}</div>
+                        <div className="text-muted-foreground text-xs">{theme.description}</div>
+                      </div>
                     </li>
                   ))}
+              </ul>
+            </div>
+            <div className="bg-primary/10 p-3 rounded-lg text-sm">
+              <p className="font-medium">✨ Premium Benefits:</p>
+              <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+                <li>• All themed word generation</li>
+                <li>• Unlimited hints</li>
+                <li>• Ad-free experience</li>
+                <li>• Advanced statistics</li>
               </ul>
             </div>
             <div className="flex gap-2">
@@ -113,8 +122,9 @@ export function ThemeSelector({
                   onUpgradeClick?.();
                 }}
                 className="flex-1"
+                size="lg"
               >
-                Upgrade to Premium
+                View Premium Plans
               </Button>
               <Button
                 variant="outline"

@@ -21,7 +21,9 @@ const plans = [
     features: [
       'Unlimited hints',
       'Ad-free experience',
-      'Exclusive word packs',
+      '🔬 Science Safari theme',
+      '🏛️ History Quest theme',
+      '🌍 Geo Genius theme',
       'Advanced statistics',
       'Custom badges',
     ],
@@ -36,6 +38,7 @@ const plans = [
     features: [
       'Everything in Monthly',
       '17% discount',
+      'All premium word themes',
       'Priority support',
       'Early access to features',
       'VIP badge',

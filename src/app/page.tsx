@@ -87,7 +87,8 @@ export default function Home() {
     
     try {
         let attempts = 0;
-        while(attempts < 3) { 
+        const maxAttempts = 2; // Reduce from 3 to 2 for faster loading
+        while(attempts < maxAttempts) { 
             console.log(`[startNewGame] Attempt ${attempts + 1} to generate word with theme:`, selectedTheme);
             try {
                 // Use new word generation with theme and used words tracking
@@ -212,7 +213,14 @@ export default function Home() {
     
     startHintTransition(async () => {
       try {
-        const result = await useHintAction({
+        console.log('[getHint] Starting hint generation...');
+        
+        // Add timeout to prevent infinite loading
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Hint generation timed out. Please try again.')), 30000);
+        });
+        
+        const hintPromise = useHintAction({
             userId: user ? user.uid : null,
             word: wordData.word,
             wordLength: wordData.word.length,
@@ -220,16 +228,22 @@ export default function Home() {
             lettersToReveal: revealedByHint.length + 1,
             isFree,
         });
+        
+        const result = await Promise.race([hintPromise, timeoutPromise]) as any;
+        
+        console.log('[getHint] Hint result:', result);
 
         if (result && result.success && result.hint) {
           setHint(result.hint);
           const newHintedLetters = result.hint.split('').filter((char: string) => char !== '_').map((char: string) => char.toLowerCase());
           setRevealedByHint(newHintedLetters);
           playSound('hint');
+          console.log('[getHint] Hint applied successfully');
         } else {
            throw new Error(result.message || "Invalid response from server.");
         }
       } catch (error: any) {
+         console.error('[getHint] Error:', error);
          toast({
             variant: "destructive",
             title: "Hint Error",
@@ -342,21 +356,10 @@ export default function Home() {
       }
       setScore(s => s + scoreGained);
       
-      console.log(`[Game] Will start new game at level ${newLevel} in 3 seconds...`);
+      console.log(`[Game] Player won! Waiting for user to continue...`);
       
-      // Clear any existing timeout
-      if (transitionTimeoutRef.current) {
-        clearTimeout(transitionTimeoutRef.current);
-      }
-      
-      // Set new timeout and store reference
-      transitionTimeoutRef.current = setTimeout(async () => {
-        console.log('[Game] Timeout fired, starting new game...');
-        setLevel(newLevel);
-        await startNewGame(newLevel, wordData.word);
-        console.log('[Game] New game started successfully');
-        transitionTimeoutRef.current = null;
-      }, 3000);
+      // Don't auto-advance - let user click "Next Level" button
+      // The button will call startNewGame manually
   
     } else if (guessedLetters.incorrect.length >= MAX_INCORRECT_TRIES) {
       setGameState("lost");
@@ -437,7 +440,11 @@ export default function Home() {
               <div className="mt-4 flex justify-center gap-4">
                   {gameState === 'won' && (
                       <Button 
-                        onClick={() => startNewGame(level + 1, wordData?.word)}
+                        onClick={async () => {
+                          const newLevel = level + 1;
+                          setLevel(newLevel);
+                          await startNewGame(newLevel, wordData?.word);
+                        }}
                         disabled={isGameLoading}
                       >
                           {isGameLoading ? (

@@ -26,7 +26,7 @@ Difficulty: {{{difficulty}}}
 Theme: {{{theme}}}
 
 Theme Guidelines:
-- current: General vocabulary from any topic
+- current: General vocabulary EXCLUDING science, history, and geography topics. Focus on: everyday objects, emotions, actions, abstract concepts, arts, literature, business, technology, food, sports, entertainment, and general knowledge. DO NOT use scientific terms, historical terms, or geographical terms.
 - science-safari: Biological sciences, space exploration, ecosystems, scientific terminology, natural phenomena, and scientific discoveries
 - history-quest: Ancient civilizations (Egypt, Rome, Greece, Mesopotamia), historical figures, historical events, artifacts, and historical terminology
 - geo-genius: Countries, capitals, cities, landmarks, geographical features, continents, oceans, and geographical terminology

@@ -221,7 +221,7 @@ export default function Home() {
         
         // Add timeout to prevent infinite loading
         const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Hint generation timed out. Please try again.')), 30000);
+          setTimeout(() => reject(new Error('Hint generation timed out. Please try again.')), 60000);
         });
         
         const hintPromise = useHintAction({

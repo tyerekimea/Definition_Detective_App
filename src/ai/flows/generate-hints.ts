@@ -89,7 +89,7 @@ const generateHintFlow = ai.defineFlow(
         
         // Add timeout to prevent hanging
         const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Model request timed out after 30 seconds')), 30000);
+          setTimeout(() => reject(new Error('Model request timed out after 60 seconds')), 60000);
         });
         
         const promptPromise = prompt(input, { model: candidate });

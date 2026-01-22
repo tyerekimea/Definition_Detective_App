@@ -42,3 +42,4 @@ yarn-error.log*
 
 #openai
 openai_key
+.vercel

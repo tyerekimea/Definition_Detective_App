@@ -11,7 +11,7 @@ const SUPER_ADMINS = [
 ];
 
 // Admin user IDs (Firebase UIDs)
-const ADMIN_USER_IDS = [
+const ADMIN_USER_IDS: string[] = [
   // Add Firebase UIDs here for additional security
   // Example: 'abc123xyz456'
 ];

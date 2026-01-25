@@ -24,6 +24,21 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
         <link href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,700;1,7..72,400;1,7..72,700&display=swap" rel="stylesheet" />
         <meta name="theme-color" content="#0f172a" />
+        {/* Google AdSense */}
+        <Script 
+          async 
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2955575113938000"
+          crossOrigin="anonymous"
+          strategy="afterInteractive"
+        />
+        {/* Monetag Tag */}
+        <Script 
+          src="https://quge5.com/88/tag.min.js" 
+          data-zone="205412" 
+          async 
+          data-cfasync="false"
+          strategy="afterInteractive"
+        />
       </head>
       <body className="font-body antialiased bg-background text-foreground">
         <Providers>

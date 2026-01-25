@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import AdManager from "@/components/ads/AdManager";
 
 export default function ProfilePage() {
   const { user, loading: authLoading, updateUsername, deleteAccount } = useAuth();
@@ -100,6 +101,8 @@ export default function ProfilePage() {
 
   return (
     <div className="container mx-auto py-8">
+      <AdManager location="profile" />
+      
       <Card className="max-w-md mx-auto mt-8">
         <CardHeader>
            <div className="flex justify-between items-center">

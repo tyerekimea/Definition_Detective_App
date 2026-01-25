@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import Providers from '@/components/providers';
 import Header from '@/components/header';
+import Script from 'next/script';
 
 export const metadata: Metadata = {
   title: 'Definition Detective',
@@ -31,6 +32,19 @@ export default function RootLayout({
             <main className="flex-1">{children}</main>
           </div>
         </Providers>
+        <Script
+          id="monetag-sw-register"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js')
+                  .then(reg => console.log('Monetag SW registered'))
+                  .catch(err => console.log('Monetag SW registration failed:', err));
+              }
+            `
+          }}
+        />
       </body>
     </html>
   );

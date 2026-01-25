@@ -24,23 +24,23 @@ export default function AdManager({ location, className = '' }: AdManagerProps) 
   const adConfig = {
     'game-over': {
       adsense: { slot: '1234567890', format: 'auto' as const },
-      monetag: { zoneId: '7654321' }
+      monetag: { zoneId: '10514754' } // Your Monetag zone ID
     },
     'level-complete': {
       adsense: { slot: '0987654321', format: 'horizontal' as const },
-      monetag: { zoneId: '1234567' }
+      monetag: { zoneId: '10514754' } // Your Monetag zone ID
     },
     'store': {
       adsense: { slot: '1122334455', format: 'auto' as const },
-      monetag: { zoneId: '5544332' }
+      monetag: { zoneId: '10514754' } // Your Monetag zone ID
     },
     'sidebar': {
       adsense: { slot: '5544332211', format: 'vertical' as const },
-      monetag: { zoneId: '1122334' }
+      monetag: { zoneId: '10514754' } // Your Monetag zone ID
     },
     'profile': {
       adsense: { slot: '6677889900', format: 'auto' as const },
-      monetag: { zoneId: '9988776' }
+      monetag: { zoneId: '10514754' } // Your Monetag zone ID
     }
   };
 

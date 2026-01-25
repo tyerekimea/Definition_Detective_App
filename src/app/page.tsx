@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Progress } from "@/components/ui/progress";
 import ShareButton from "@/components/game/share-button";
+import AdManager from "@/components/ads/AdManager";
 
 
 type GameState = "playing" | "won" | "lost";
@@ -425,6 +426,7 @@ export default function Home() {
           </div>
           
           {(gameState === "won" || gameState === "lost") ? (
+              <>
               <Alert variant={gameState === 'won' ? 'default' : 'destructive'} className="text-center">
               {gameState === 'won' ? <PartyPopper className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
               <AlertTitle className="text-2xl font-bold">
@@ -479,6 +481,9 @@ export default function Home() {
                   )}
               </div>
               </Alert>
+              
+              <AdManager location="game-over" />
+              </>
           ) : (
               <>
               <div className="flex flex-wrap justify-center gap-4">

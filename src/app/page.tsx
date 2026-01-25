@@ -31,6 +31,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import ShareButton from "@/components/game/share-button";
 import AdManager from "@/components/ads/AdManager";
+import GoogleAdsenseRewardedAd from "@/components/ads/GoogleAdsenseRewardedAd";
 
 
 type GameState = "playing" | "won" | "lost";
@@ -53,6 +54,7 @@ export default function Home() {
   const [adProgress, setAdProgress] = useState(0);
   const [visualHint, setVisualHint] = useState<string | null>(null);
   const [isVisualHintLoading, setIsVisualHintLoading] = useState(false);
+  const [showAdsenseAd, setShowAdsenseAd] = useState(false);
   const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [selectedTheme, setSelectedTheme] = useState<WordTheme>('current');
   const [isPremium, setIsPremium] = useState(false);
@@ -263,22 +265,26 @@ export default function Home() {
         toast({ variant: "destructive", title: "Login Required", description: "You must log in to watch an ad for a hint."});
         return;
     }
-    setIsWatchingAd(true);
-    setAdProgress(0);
+    setShowAdsenseAd(true);
+  };
 
-    const interval = setInterval(() => {
-      setAdProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setTimeout(() => {
-            setIsWatchingAd(false);
-            getHint(true); 
-          }, 500);
-          return 100;
-        }
-        return prev + 10;
-      });
-    }, 300);
+  const handleAdComplete = () => {
+    setShowAdsenseAd(false);
+    getHint(true); // Give free hint after ad is watched
+  };
+
+  const handleAdSkipped = () => {
+    setShowAdsenseAd(false);
+    toast({
+      variant: "destructive",
+      title: "Ad Skipped",
+      description: "Please watch the entire ad to earn your free hint.",
+    });
+  };
+
+  const handleAdError = (error: Error) => {
+    setShowAdsenseAd(false);
+    console.error('Ad error:', error);
   };
 
   const getVisualHint = async () => {
@@ -491,9 +497,9 @@ export default function Home() {
                   <Lightbulb className={cn("mr-2 h-4 w-4", isHintLoading && !isWatchingAd && "animate-spin")} />
                   {isHintLoading && !isWatchingAd ? 'Getting Hint...' : 'Use a Hint'}
                   </Button>
-                  <Button onClick={handleRewardedAd} disabled={isHintLoading || allLettersGuessed} variant="outline">
-                  <Clapperboard className={cn("mr-2 h-4 w-4", isWatchingAd && "animate-spin")} />
-                  {isWatchingAd ? 'Loading Ad...' : 'Watch Ad for Hint'}
+                  <Button onClick={handleRewardedAd} disabled={isHintLoading || allLettersGuessed || showAdsenseAd} variant="outline">
+                  <Clapperboard className={cn("mr-2 h-4 w-4", showAdsenseAd && "animate-spin")} />
+                  {showAdsenseAd ? 'Loading Ad...' : 'Watch Ad for Hint'}
                   </Button>
                   <Button onClick={getVisualHint} disabled={isVisualHintLoading || !!visualHint} variant="secondary">
                     <Share className={cn("mr-2 h-4 w-4", isVisualHintLoading && "animate-spin")} />
@@ -553,22 +559,26 @@ export default function Home() {
 
       {gameContent()}
       
-      <AlertDialog open={isWatchingAd}>
-        <AlertDialogContent>
+      {/* Google AdSense Rewarded Ad Modal */}
+      {showAdsenseAd && (
+        <AlertDialog open={showAdsenseAd} onOpenChange={setShowAdsenseAd}>
+          <AlertDialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <AlertDialogHeader>
-            <AlertDialogTitle>Your hint is sponsored by...</AlertDialogTitle>
-            <AlertDialogDescription>
-                This ad will finish shortly. Thanks for your support!
-            </AlertDialogDescription>
+              <AlertDialogTitle>Watch an Ad for a Free Hint</AlertDialogTitle>
+              <AlertDialogDescription>
+                Thanks for supporting us! Watch this ad to earn a free hint.
+              </AlertDialogDescription>
             </AlertDialogHeader>
-            <div className="flex flex-col items-center justify-center space-y-4 py-8">
-            <div className="w-full h-32 bg-muted rounded-md flex items-center justify-center">
-                <p className="text-muted-foreground">Video Ad Simulation</p>
+            <div className="py-4">
+              <GoogleAdsenseRewardedAd
+                onAdComplete={handleAdComplete}
+                onAdSkipped={handleAdSkipped}
+                onAdError={handleAdError}
+              />
             </div>
-            <Progress value={adProgress} className="w-full" />
-            </div>
-        </AlertDialogContent>
-      </AlertDialog>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 }

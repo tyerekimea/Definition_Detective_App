@@ -49,7 +49,10 @@ interface GenerateWordResult {
 
 // Get recent used words from Firebase (last 80)
 async function getRecentUsedWords(userId: string | null): Promise<string[]> {
-  if (!userId) return [];
+  if (!userId) {
+    console.log('[getRecentUsedWords] No userId provided');
+    return [];
+  }
   
   try {
     initAdminApp();
@@ -57,11 +60,20 @@ async function getRecentUsedWords(userId: string | null): Promise<string[]> {
     const userProfileRef = firestore.collection('userProfiles').doc(userId);
     const userDoc = await userProfileRef.get();
     
-    if (!userDoc.exists) return [];
+    if (!userDoc.exists) {
+      console.log('[getRecentUsedWords] User profile does not exist');
+      return [];
+    }
     
     const usedWords = userDoc.data()?.usedWords || [];
+    console.log('[getRecentUsedWords] Total used words in DB:', usedWords.length);
+    
     // Keep only last 80 words for prompt efficiency
-    return usedWords.slice(-80);
+    const recentWords = usedWords.slice(-80);
+    console.log('[getRecentUsedWords] Returning last', recentWords.length, 'words');
+    console.log('[getRecentUsedWords] Recent words:', recentWords.slice(-10)); // Show last 10
+    
+    return recentWords;
   } catch (error) {
     console.warn('[getRecentUsedWords] Error:', error);
     return [];
@@ -131,6 +143,7 @@ export async function generateUniqueWord(params: {
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
       console.log(`[generateUniqueWord] Attempt ${attempt + 1}/${maxAttempts}`);
+      console.log(`[generateUniqueWord] Excluding ${usedWordsSet.size} words from AI`);
       
       // Call AI with constraints and exclusions
       const result = await aiGenerateWord({
@@ -139,22 +152,26 @@ export async function generateUniqueWord(params: {
         excludeWords: Array.from(usedWordsSet),
       });
       
+      console.log('[generateUniqueWord] AI returned:', result);
+      
       if (!result || !result.word) {
         console.warn('[generateUniqueWord] AI returned no word');
         continue;
       }
       
       const normalized = normalizeWord(result.word);
+      console.log('[generateUniqueWord] Normalized word:', normalized);
       
       // Validate word
       if (!isValidWord(normalized, constraints)) {
-        console.warn('[generateUniqueWord] Invalid word:', result.word, 'normalized:', normalized);
+        console.warn('[generateUniqueWord] Invalid word:', result.word, 'normalized:', normalized, 'constraints:', constraints);
         continue;
       }
       
       // Check if already used
       if (usedWordsSet.has(normalized)) {
         console.warn('[generateUniqueWord] Word already used:', normalized);
+        console.warn('[generateUniqueWord] Used words set contains:', Array.from(usedWordsSet).slice(-20));
         continue;
       }
       

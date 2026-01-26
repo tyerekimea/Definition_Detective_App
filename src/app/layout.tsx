@@ -24,6 +24,8 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
         <link href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,700;1,7..72,400;1,7..72,700&display=swap" rel="stylesheet" />
         <meta name="theme-color" content="#0f172a" />
+        {/* Google AdSense Verification */}
+        <meta name="google-adsense-account" content="ca-pub-2955575113938000" />
         {/* Google AdSense */}
         <Script 
           async 

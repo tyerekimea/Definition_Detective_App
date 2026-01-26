@@ -98,9 +98,9 @@ export default function Home() {
     
     try {
         let attempts = 0;
-        const maxAttempts = 2; // Reduce from 3 to 2 for faster loading
+        const maxAttempts = 5; // Increased to 5 attempts for better reliability
         while(attempts < maxAttempts) { 
-            console.log(`[startNewGame] Attempt ${attempts + 1} to generate word with theme:`, selectedTheme);
+            console.log(`[startNewGame] Attempt ${attempts + 1}/${maxAttempts} to generate word with theme:`, selectedTheme);
             try {
                 // Use new word generation with theme and used words tracking
                 const result = await generateWordWithTheme({
@@ -113,6 +113,10 @@ export default function Home() {
                 
                 if (!result.success || !result.word) {
                     console.error('[startNewGame] Invalid result from generateWordWithTheme:', result);
+                    // If we keep failing, it might be the usedWords list is too restrictive
+                    if (attempts >= 3) {
+                        console.warn('[startNewGame] Multiple failures, might need to clear usedWords');
+                    }
                     attempts++;
                     continue;
                 }
@@ -139,7 +143,7 @@ export default function Home() {
             attempts++;
         }
         if (!newWordData) {
-            throw new Error("Failed to generate a new word after 3 attempts.");
+            throw new Error(`Failed to generate a new word after ${maxAttempts} attempts. Try refreshing the page or clearing your word history.`);
         }
     } catch (error: any) {
         console.error("[startNewGame] Failed to generate word:", error);

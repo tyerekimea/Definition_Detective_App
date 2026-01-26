@@ -117,6 +117,13 @@ export async function generateWordWithTheme(params: {
           const userData = userDoc.data();
           usedWords = userData?.usedWords || [];
           
+          // IMPORTANT: Limit to last 50 words to prevent the list from growing too large
+          // This prevents the AI from being overwhelmed with too many exclusions
+          if (usedWords.length > 50) {
+            usedWords = usedWords.slice(-50);
+            console.log('[generateWordWithTheme] Trimmed usedWords to last 50');
+          }
+          
           // Use user's selected theme if they have one
           if (userData?.selectedTheme) {
             userTheme = userData.selectedTheme as WordTheme;
@@ -128,12 +135,24 @@ export async function generateWordWithTheme(params: {
       }
     }
 
+    console.log('[generateWordWithTheme] Generating word with:', {
+      difficulty: params.difficulty,
+      theme: userTheme,
+      excludedWordsCount: usedWords.length
+    });
+
     // Generate word with theme and exclusions
     const result = await generateWord({
       difficulty: params.difficulty,
       theme: userTheme,
       excludeWords: usedWords.length > 0 ? usedWords : undefined,
     });
+
+    if (!result || !result.word) {
+      throw new Error('AI did not return a valid word');
+    }
+
+    console.log('[generateWordWithTheme] Generated word:', result.word);
 
     // Add word to user's used words
     if (params.userId && result.word) {
@@ -142,9 +161,14 @@ export async function generateWordWithTheme(params: {
         const firestore = getFirestore();
         const userProfileRef = firestore.collection('userProfiles').doc(params.userId);
         
+        // Add new word and keep only last 50 words
+        const updatedUsedWords = [...usedWords, result.word.toLowerCase()].slice(-50);
+        
         await userProfileRef.update({
-          usedWords: [...usedWords, result.word.toLowerCase()],
+          usedWords: updatedUsedWords,
         });
+        
+        console.log('[generateWordWithTheme] Updated usedWords, total:', updatedUsedWords.length);
       } catch (firebaseError: any) {
         console.warn('Firebase error updating used words:', firebaseError);
         // Continue even if we can't update used words
@@ -161,6 +185,30 @@ export async function generateWordWithTheme(params: {
     return {
       success: false,
       message: error.message || 'Failed to generate word',
+    };
+  }
+}
+
+// Clear used words (useful if user gets stuck with same words)
+export async function clearUsedWords(userId: string): Promise<{ success: boolean; message?: string }> {
+  try {
+    initAdminApp();
+    const firestore = getFirestore();
+    const userProfileRef = firestore.collection('userProfiles').doc(userId);
+
+    await userProfileRef.update({
+      usedWords: [],
+    });
+
+    return {
+      success: true,
+      message: 'Used words cleared successfully',
+    };
+  } catch (error: any) {
+    console.error('Error clearing used words:', error);
+    return {
+      success: false,
+      message: error.message || 'Failed to clear used words',
     };
   }
 }

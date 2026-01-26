@@ -97,53 +97,38 @@ export default function Home() {
     let newWordData: WordData | null = null;
     
     try {
-        let attempts = 0;
-        const maxAttempts = 5; // Increased to 5 attempts for better reliability
-        while(attempts < maxAttempts) { 
-            console.log(`[startNewGame] Attempt ${attempts + 1}/${maxAttempts} to generate word with theme:`, selectedTheme);
-            try {
-                // Use new word generation with theme and used words tracking
-                const result = await generateWordWithTheme({
-                    difficulty,
-                    theme: selectedTheme,
-                    userId: user?.uid || null,
-                });
-                
-                console.log('[startNewGame] Generated word result:', result);
-                
-                if (!result.success || !result.word) {
-                    console.error('[startNewGame] Invalid result from generateWordWithTheme:', result);
-                    // If we keep failing, it might be the usedWords list is too restrictive
-                    if (attempts >= 3) {
-                        console.warn('[startNewGame] Multiple failures, might need to clear usedWords');
-                    }
-                    attempts++;
-                    continue;
-                }
-                
-                console.log('[startNewGame] Generated word:', result.word);
-                if (result.word.toLowerCase() !== currentWord?.toLowerCase()) {
-                    newWordData = { 
-                        word: result.word, 
-                        definition: result.definition || '', 
-                        difficulty,
-                        theme: selectedTheme 
-                    };
-                    break;
-                }
-                console.log('[startNewGame] Word matches previous, trying again...');
-            } catch (genError: any) {
-                console.error(`[startNewGame] Attempt ${attempts + 1} failed:`, genError);
-                console.error('[startNewGame] Generation error details:', {
-                    message: genError?.message,
-                    stack: genError?.stack,
-                    name: genError?.name
-                });
+        // Use robust word generator with level-based difficulty
+        console.log('[startNewGame] Generating word for level:', currentLevel);
+        
+        try {
+            const result = await generateWordWithTheme({
+                difficulty,
+                theme: selectedTheme,
+                userId: user?.uid || null,
+                level: currentLevel, // Pass level for deterministic difficulty
+                previousWord: currentWord, // Avoid immediate repeat
+            });
+            
+            console.log('[startNewGame] Generated word result:', result);
+            
+            if (!result.success || !result.word) {
+                throw new Error(result.message || 'Failed to generate word');
             }
-            attempts++;
+            
+            console.log('[startNewGame] Generated word:', result.word);
+            newWordData = { 
+                word: result.word, 
+                definition: result.definition || '', 
+                difficulty,
+                theme: selectedTheme 
+            };
+        } catch (genError: any) {
+            console.error('[startNewGame] Word generation failed:', genError);
+            throw new Error(genError.message || 'Failed to generate a new word. Please try again.');
         }
+        
         if (!newWordData) {
-            throw new Error(`Failed to generate a new word after ${maxAttempts} attempts. Try refreshing the page or clearing your word history.`);
+            throw new Error('Failed to generate a new word. Please refresh the page.');
         }
     } catch (error: any) {
         console.error("[startNewGame] Failed to generate word:", error);

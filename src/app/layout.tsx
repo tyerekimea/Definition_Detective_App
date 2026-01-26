@@ -31,14 +31,6 @@ export default function RootLayout({
           crossOrigin="anonymous"
           strategy="afterInteractive"
         />
-        {/* Monetag Tag */}
-        <Script 
-          src="https://quge5.com/88/tag.min.js" 
-          data-zone="205412" 
-          async 
-          data-cfasync="false"
-          strategy="afterInteractive"
-        />
       </head>
       <body className="font-body antialiased bg-background text-foreground">
         <Providers>
@@ -47,19 +39,6 @@ export default function RootLayout({
             <main className="flex-1">{children}</main>
           </div>
         </Providers>
-        <Script
-          id="monetag-sw-register"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
-              if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('/sw.js')
-                  .then(reg => console.log('Monetag SW registered'))
-                  .catch(err => console.log('Monetag SW registration failed:', err));
-              }
-            `
-          }}
-        />
       </body>
     </html>
   );

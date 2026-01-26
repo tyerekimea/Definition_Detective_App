@@ -105,7 +105,7 @@ export async function generateWordWithTheme(params: {
   previousWord?: string;
 }): Promise<{ success: boolean; word?: string; definition?: string; message?: string }> {
   // Import the robust generator
-  const { generateUniqueWord, levelToConstraints } = await import('./word-generator');
+  const { generateUniqueWord } = await import('./word-generator');
   
   try {
     // Use level-based constraints if level provided, otherwise map difficulty

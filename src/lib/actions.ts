@@ -96,90 +96,35 @@ export async function useHintAction(data: GenerateHintInput & { userId?: string 
 }
 
 // Generate word with theme and exclude used words
+// Now uses the robust word generator with fallback
 export async function generateWordWithTheme(params: {
   difficulty: 'easy' | 'medium' | 'hard';
   theme?: WordTheme;
   userId?: string | null;
+  level?: number;
+  previousWord?: string;
 }): Promise<{ success: boolean; word?: string; definition?: string; message?: string }> {
+  // Import the robust generator
+  const { generateUniqueWord, levelToConstraints } = await import('./word-generator');
+  
   try {
-    let usedWords: string[] = [];
-    let userTheme: WordTheme = params.theme || 'current';
-
-    // Get user's used words and theme preference from Firestore
-    if (params.userId) {
-      try {
-        initAdminApp();
-        const firestore = getFirestore();
-        const userProfileRef = firestore.collection('userProfiles').doc(params.userId);
-        const userDoc = await userProfileRef.get();
-
-        if (userDoc.exists) {
-          const userData = userDoc.data();
-          usedWords = userData?.usedWords || [];
-          
-          // IMPORTANT: Limit to last 50 words to prevent the list from growing too large
-          // This prevents the AI from being overwhelmed with too many exclusions
-          if (usedWords.length > 50) {
-            usedWords = usedWords.slice(-50);
-            console.log('[generateWordWithTheme] Trimmed usedWords to last 50');
-          }
-          
-          // Use user's selected theme if they have one
-          if (userData?.selectedTheme) {
-            userTheme = userData.selectedTheme as WordTheme;
-          }
-        }
-      } catch (firebaseError: any) {
-        console.warn('Firebase error getting user data:', firebaseError);
-        // Continue without used words tracking
-      }
-    }
-
-    console.log('[generateWordWithTheme] Generating word with:', {
-      difficulty: params.difficulty,
-      theme: userTheme,
-      excludedWordsCount: usedWords.length
+    // Use level-based constraints if level provided, otherwise map difficulty
+    const level = params.level || (
+      params.difficulty === 'easy' ? 3 :
+      params.difficulty === 'medium' ? 10 :
+      20
+    );
+    
+    console.log('[generateWordWithTheme] Generating word for level:', level);
+    
+    const result = await generateUniqueWord({
+      level,
+      theme: params.theme,
+      userId: params.userId,
+      previousWord: params.previousWord,
     });
-
-    // Generate word with theme and exclusions
-    const result = await generateWord({
-      difficulty: params.difficulty,
-      theme: userTheme,
-      excludeWords: usedWords.length > 0 ? usedWords : undefined,
-    });
-
-    if (!result || !result.word) {
-      throw new Error('AI did not return a valid word');
-    }
-
-    console.log('[generateWordWithTheme] Generated word:', result.word);
-
-    // Add word to user's used words
-    if (params.userId && result.word) {
-      try {
-        initAdminApp();
-        const firestore = getFirestore();
-        const userProfileRef = firestore.collection('userProfiles').doc(params.userId);
-        
-        // Add new word and keep only last 50 words
-        const updatedUsedWords = [...usedWords, result.word.toLowerCase()].slice(-50);
-        
-        await userProfileRef.update({
-          usedWords: updatedUsedWords,
-        });
-        
-        console.log('[generateWordWithTheme] Updated usedWords, total:', updatedUsedWords.length);
-      } catch (firebaseError: any) {
-        console.warn('Firebase error updating used words:', firebaseError);
-        // Continue even if we can't update used words
-      }
-    }
-
-    return {
-      success: true,
-      word: result.word,
-      definition: result.definition,
-    };
+    
+    return result;
   } catch (error: any) {
     console.error('Error in generateWordWithTheme:', error);
     return {

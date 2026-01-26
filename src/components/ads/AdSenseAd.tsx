@@ -38,7 +38,7 @@ export default function AdSenseAd({
       <ins
         className="adsbygoogle"
         style={{ display: 'block' }}
-        data-ad-client={process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID || 'ca-pub-0000000000000000'}
+        data-ad-client="ca-pub-2955575113938000"
         data-ad-slot={adSlot}
         data-ad-format={adFormat}
         data-full-width-responsive={fullWidthResponsive.toString()}

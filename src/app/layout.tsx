@@ -3,7 +3,6 @@ import type { Metadata } from 'next';
 import './globals.css';
 import Providers from '@/components/providers';
 import Header from '@/components/header';
-import Script from 'next/script';
 
 export const metadata: Metadata = {
   title: 'Definition Detective',
@@ -26,13 +25,12 @@ export default function RootLayout({
         <meta name="theme-color" content="#0f172a" />
         {/* Google AdSense Verification */}
         <meta name="google-adsense-account" content="ca-pub-2955575113938000" />
-        {/* Google AdSense */}
-        <Script 
+        {/* Google AdSense - Using regular script tag to avoid Next.js warning */}
+        <script 
           async 
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2955575113938000"
           crossOrigin="anonymous"
-          strategy="afterInteractive"
-        />
+        ></script>
       </head>
       <body className="font-body antialiased bg-background text-foreground">
         <Providers>

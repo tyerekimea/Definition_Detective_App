@@ -22,46 +22,31 @@ interface AdManagerProps {
  */
 export default function AdManager({ location, className = '' }: AdManagerProps) {
   // Ad configuration for different locations
-  // TODO: Replace these placeholder slot IDs with real ones from your AdSense dashboard
+  // Real AdSense ad slot IDs from your dashboard
   const adConfig = {
     'game-over': {
-      slot: '1234567890', // REPLACE WITH REAL SLOT ID
+      slot: '3043059051', // Game Over Ad
       format: 'auto' as const
     },
     'level-complete': {
-      slot: '0987654321', // REPLACE WITH REAL SLOT ID
+      slot: '7657091487', // Level Complete Ad
       format: 'horizontal' as const
     },
     'store': {
-      slot: '1122334455', // REPLACE WITH REAL SLOT ID
+      slot: '7657091487', // Pricing/Store Ad
       format: 'auto' as const
     },
     'sidebar': {
-      slot: '5544332211', // REPLACE WITH REAL SLOT ID
+      slot: '8058925474', // Sidebar Ad
       format: 'vertical' as const
     },
     'profile': {
-      slot: '6677889900', // REPLACE WITH REAL SLOT ID
+      slot: '8058925474', // Profile Ad
       format: 'auto' as const
     }
   };
 
   const config = adConfig[location];
-
-  // Temporarily disable ads until real slot IDs are added
-  // This prevents 400 errors from placeholder IDs
-  const isPlaceholder = config.slot.match(/^[0-9]{10}$/);
-  
-  if (isPlaceholder) {
-    // Show placeholder message instead of broken ad
-    return (
-      <div className={`ad-placeholder my-4 p-4 border-2 border-dashed border-muted rounded-lg text-center ${className}`}>
-        <p className="text-sm text-muted-foreground">
-          Ad space - Create ad units in AdSense dashboard
-        </p>
-      </div>
-    );
-  }
 
   return (
     <AdSenseAd 

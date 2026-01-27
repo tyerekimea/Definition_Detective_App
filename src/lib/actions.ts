@@ -135,6 +135,21 @@ export async function generateWordWithTheme(params: {
 }
 
 // Clear used words (useful if user gets stuck with same words)
+async function deleteUsedWordsSubcollection(
+  userProfileRef: FirebaseFirestore.DocumentReference
+): Promise<void> {
+  const usedWordsRef = userProfileRef.collection('usedWords');
+  const pageSize = 50;
+  while (true) {
+    const snapshot = await usedWordsRef.limit(pageSize).get();
+    if (snapshot.empty) return;
+
+    const batch = usedWordsRef.firestore.batch();
+    snapshot.docs.forEach(doc => batch.delete(doc.ref));
+    await batch.commit();
+  }
+}
+
 export async function clearUsedWords(userId: string): Promise<{ success: boolean; message?: string }> {
   try {
     initAdminApp();
@@ -144,6 +159,7 @@ export async function clearUsedWords(userId: string): Promise<{ success: boolean
     await userProfileRef.update({
       usedWords: [],
     });
+    await deleteUsedWordsSubcollection(userProfileRef);
 
     return {
       success: true,

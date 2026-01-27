@@ -2,7 +2,7 @@
 
 import { generateWord as aiGenerateWord } from '@/ai/flows/generate-word-flow';
 import { getApps, initializeApp, cert, type App } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import {
   levelToConstraints,
   normalizeWord,
@@ -64,19 +64,73 @@ async function getRecentUsedWords(userId: string | null): Promise<string[]> {
       console.log('[getRecentUsedWords] User profile does not exist');
       return [];
     }
-    
-    const usedWords = userDoc.data()?.usedWords || [];
-    console.log('[getRecentUsedWords] Total used words in DB:', usedWords.length);
-    
+
+    // New storage: subcollection userProfiles/{userId}/usedWords
+    const usedWordsRef = userProfileRef.collection('usedWords');
+    const snapshot = await usedWordsRef
+      .orderBy('createdAt', 'desc')
+      .limit(80)
+      .get();
+
+    if (!snapshot.empty) {
+      const recentWords = snapshot.docs
+        .map(doc => doc.data()?.word)
+        .map(word => (typeof word === 'string' ? normalizeWord(word) : ''))
+        .filter(Boolean)
+        .reverse(); // keep chronological order
+
+      console.log('[getRecentUsedWords] Returning last', recentWords.length, 'words');
+      console.log('[getRecentUsedWords] Recent words:', recentWords.slice(-10)); // Show last 10
+      return recentWords;
+    }
+
+    // Fallback: legacy array on user profile
+    const usedWordsRaw = userDoc.data()?.usedWords;
+    const usedWords = Array.isArray(usedWordsRaw)
+      ? usedWordsRaw
+          .map(word => (typeof word === 'string' ? normalizeWord(word) : ''))
+          .filter(Boolean)
+      : [];
+    console.log('[getRecentUsedWords] Total used words in DB (legacy array):', usedWords.length);
+
     // Keep only last 80 words for prompt efficiency
     const recentWords = usedWords.slice(-80);
-    console.log('[getRecentUsedWords] Returning last', recentWords.length, 'words');
+    console.log('[getRecentUsedWords] Returning last', recentWords.length, 'words (legacy)');
     console.log('[getRecentUsedWords] Recent words:', recentWords.slice(-10)); // Show last 10
-    
+
+    // If the legacy array is oversized, trim it to reduce document bloat.
+    if (usedWords.length > 100) {
+      const trimmed = usedWords.slice(-100);
+      await userProfileRef.set({ usedWords: trimmed }, { merge: true });
+      console.log('[getRecentUsedWords] Trimmed usedWords to', trimmed.length);
+    }
+
     return recentWords;
   } catch (error) {
     console.warn('[getRecentUsedWords] Error:', error);
     return [];
+  }
+}
+
+async function pruneUsedWordsCollection(
+  usedWordsRef: FirebaseFirestore.CollectionReference,
+  keepCount: number
+): Promise<void> {
+  const pageSize = 50;
+  while (true) {
+    const snapshot = await usedWordsRef
+      .orderBy('createdAt', 'desc')
+      .offset(keepCount)
+      .limit(pageSize)
+      .get();
+
+    if (snapshot.empty) {
+      return;
+    }
+
+    const batch = usedWordsRef.firestore.batch();
+    snapshot.docs.forEach(doc => batch.delete(doc.ref));
+    await batch.commit();
   }
 }
 
@@ -88,18 +142,18 @@ async function saveUsedWord(userId: string | null, word: string): Promise<void> 
     initAdminApp();
     const firestore = getFirestore();
     const userProfileRef = firestore.collection('userProfiles').doc(userId);
-    
-    const userDoc = await userProfileRef.get();
-    const currentUsedWords = userDoc.exists ? (userDoc.data()?.usedWords || []) : [];
-    
-    // Add new word and keep only last 100 words
-    const updatedUsedWords = [...currentUsedWords, word.toLowerCase()].slice(-100);
-    
-    await userProfileRef.update({
-      usedWords: updatedUsedWords,
+
+    const normalizedWord = normalizeWord(word);
+    if (!normalizedWord) return;
+
+    const usedWordsRef = userProfileRef.collection('usedWords');
+    await usedWordsRef.add({
+      word: normalizedWord,
+      createdAt: FieldValue.serverTimestamp(),
     });
-    
-    console.log('[saveUsedWord] Saved word, total used:', updatedUsedWords.length);
+
+    await pruneUsedWordsCollection(usedWordsRef, 100);
+    console.log('[saveUsedWord] Saved word to subcollection');
   } catch (error) {
     console.warn('[saveUsedWord] Error:', error);
   }

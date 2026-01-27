@@ -12,6 +12,10 @@ export const GenerateWordInputSchema = z.object({
     .array(z.string())
     .optional()
     .describe('Array of words to exclude (words the user has already seen).'),
+  excludeWordsString: z
+    .string()
+    .optional()
+    .describe('Comma-separated list of words to exclude (prompt helper).'),
 });
 export type GenerateWordInput = z.infer<typeof GenerateWordInputSchema>;
 

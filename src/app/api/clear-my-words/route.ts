@@ -51,6 +51,17 @@ export async function GET(request: NextRequest) {
     await userProfileRef.update({
       usedWords: [],
     });
+
+    const usedWordsRef = userProfileRef.collection('usedWords');
+    const pageSize = 50;
+    while (true) {
+      const snapshot = await usedWordsRef.limit(pageSize).get();
+      if (snapshot.empty) break;
+
+      const batch = usedWordsRef.firestore.batch();
+      snapshot.docs.forEach(doc => batch.delete(doc.ref));
+      await batch.commit();
+    }
     
     return NextResponse.json({
       success: true,

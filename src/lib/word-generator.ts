@@ -60,11 +60,6 @@ async function getRecentUsedWords(userId: string | null): Promise<string[]> {
     const userProfileRef = firestore.collection('userProfiles').doc(userId);
     const userDoc = await userProfileRef.get();
     
-    if (!userDoc.exists) {
-      console.log('[getRecentUsedWords] User profile does not exist');
-      return [];
-    }
-
     // New storage: subcollection userProfiles/{userId}/usedWords
     const usedWordsRef = userProfileRef.collection('usedWords');
     const snapshot = await usedWordsRef

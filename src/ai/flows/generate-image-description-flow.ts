@@ -42,12 +42,24 @@ export const generateImageDescriptionFlow = ai.defineFlow(
       throw new Error('Server configuration error: Invalid Google API key.');
     }
 
-    // Try multiple model candidates
+    // Build prioritized candidate list:
+    // 1) explicit `GOOGLE_GENAI_MODEL`
+    // 2) comma-separated `GOOGLE_GENAI_MODEL_CANDIDATES`
+    // 3) sensible defaults (try common model ids)
+    const explicit = process.env.GOOGLE_GENAI_MODEL?.trim();
+    const listFromEnv = (process.env.GOOGLE_GENAI_MODEL_CANDIDATES || '')
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
+    const defaultCandidates = [
+      'googleai/gemini-2.0-flash-exp',      // Experimental
+      'googleai/gemini-1.5-flash-latest',   // Latest stable
+      'googleai/gemini-1.5-pro-latest'      // More capable
+    ];
     const candidates = [
-      'googleai/gemini-2.0-flash-exp',      // Working! (Experimental)
-      'googleai/gemini-1.5-flash',          // Try without -latest
-      'googleai/gemini-1.5-pro',            // Try without -latest
-      'googleai/gemini-pro'                 // Stable fallback
+      ...(explicit ? [explicit] : []),
+      ...listFromEnv,
+      ...defaultCandidates,
     ];
 
     let lastErr: any = null;

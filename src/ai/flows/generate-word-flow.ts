@@ -78,10 +78,9 @@ const generateWordFlow = ai.defineFlow(
       'openai/gpt-4o-mini',                 // Fast, cheap, reliable
       'openai/gpt-4o',                      // High quality
       // Gemini models - fallback
-      'googleai/gemini-2.0-flash-exp',      // Working! (Experimental)
-      'googleai/gemini-1.5-flash',          // Try without -latest
-      'googleai/gemini-1.5-pro',            // Try without -latest
-      'googleai/gemini-pro'                 // Stable fallback
+      'googleai/gemini-2.0-flash-exp',      // Experimental
+      'googleai/gemini-1.5-flash-latest',   // Latest stable
+      'googleai/gemini-1.5-pro-latest'      // More capable
     ];
     const candidates = [
       ...(explicit ? [explicit] : []),

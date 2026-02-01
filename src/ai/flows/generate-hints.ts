@@ -70,20 +70,32 @@ const generateHintFlow = ai.defineFlow(
     outputSchema: GenerateHintOutputSchema,
   },
   async input => {
-    // Try multiple model candidates
+    // Build prioritized candidate list:
+    // 1) explicit `GOOGLE_GENAI_MODEL`
+    // 2) comma-separated `GOOGLE_GENAI_MODEL_CANDIDATES`
+    // 3) sensible defaults (try common model ids)
+    const explicit = process.env.GOOGLE_GENAI_MODEL?.trim();
+    const listFromEnv = (process.env.GOOGLE_GENAI_MODEL_CANDIDATES || '')
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
     const defaultCandidates = [
       // OpenAI models - best for precise instructions
       'openai/gpt-4o-mini',                 // Fast, cheap, reliable
       'openai/gpt-4o',                      // High quality
       // Gemini models - fallback
-      'googleai/gemini-2.0-flash-exp',      // Working! (Experimental)
-      'googleai/gemini-1.5-flash',          // Try without -latest
-      'googleai/gemini-1.5-pro',            // Try without -latest
-      'googleai/gemini-pro'                 // Stable fallback
+      'googleai/gemini-2.0-flash-exp',      // Experimental
+      'googleai/gemini-1.5-flash-latest',   // Latest stable
+      'googleai/gemini-1.5-pro-latest'      // More capable
+    ];
+    const candidates = [
+      ...(explicit ? [explicit] : []),
+      ...listFromEnv,
+      ...defaultCandidates,
     ];
 
     let lastErr: any = null;
-    for (const candidate of defaultCandidates) {
+    for (const candidate of candidates) {
       try {
         console.debug('[generateHintFlow] trying model candidate:', candidate);
         
@@ -125,7 +137,7 @@ const generateHintFlow = ai.defineFlow(
     }
 
     // If we get here, all models failed
-    const tried = defaultCandidates.join(', ');
+    const tried = candidates.join(', ');
     const finalMsg = lastErr?.originalMessage ?? lastErr?.message ?? String(lastErr ?? 'no response');
     throw new Error(
       `AI hint generation failed — tried models: [${tried}]. Last error: ${finalMsg}`

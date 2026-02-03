@@ -52,15 +52,15 @@ export const generateImageDescriptionFlow = ai.defineFlow(
       .map(s => s.trim())
       .filter(Boolean);
     const defaultCandidates = [
-      'googleai/gemini-2.0-flash-exp',      // Experimental
-      'googleai/gemini-1.5-flash-latest',   // Latest stable
-      'googleai/gemini-1.5-pro-latest'      // More capable
+      'googleai/gemini-2.5-flash',          // Fast, stable
+      'googleai/gemini-2.5-pro',            // Higher quality
+      'googleai/gemini-2.5-flash-lite'      // Lowest cost
     ];
-    const candidates = [
+    const candidates = Array.from(new Set([
       ...(explicit ? [explicit] : []),
       ...listFromEnv,
       ...defaultCandidates,
-    ];
+    ]));
 
     let lastErr: any = null;
     for (const candidate of candidates) {

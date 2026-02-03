@@ -84,15 +84,15 @@ const generateHintFlow = ai.defineFlow(
       'openai/gpt-4o-mini',                 // Fast, cheap, reliable
       'openai/gpt-4o',                      // High quality
       // Gemini models - fallback
-      'googleai/gemini-2.0-flash-exp',      // Experimental
-      'googleai/gemini-1.5-flash-latest',   // Latest stable
-      'googleai/gemini-1.5-pro-latest'      // More capable
+      'googleai/gemini-2.5-flash',          // Fast, stable
+      'googleai/gemini-2.5-pro',            // Higher quality
+      'googleai/gemini-2.5-flash-lite'      // Lowest cost
     ];
-    const candidates = [
+    const candidates = Array.from(new Set([
       ...(explicit ? [explicit] : []),
       ...listFromEnv,
       ...defaultCandidates,
-    ];
+    ]));
 
     let lastErr: any = null;
     for (const candidate of candidates) {

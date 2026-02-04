@@ -27,7 +27,7 @@ export default function AdManager({ location, className = '' }: AdManagerProps) 
       slot: '7657091487', // Replace with real Level Complete Ad slot ID
       format: 'horizontal',
     },
-    'pricing': {
+    'store': {
       slot: '8058925474', // Replace with real Store Ad slot ID
       format: 'auto',
     },

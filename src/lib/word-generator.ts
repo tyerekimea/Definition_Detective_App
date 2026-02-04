@@ -239,7 +239,6 @@ export async function generateUniqueWord(params: {
  */
 export async function clearUserWordHistory(userId: string): Promise<{ success: boolean }> {
   try {
-    initAdminApp();
     const firestore = getFirestore();
     const userProfileRef = firestore.collection('userProfiles').doc(userId);
     

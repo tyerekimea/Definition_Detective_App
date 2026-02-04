@@ -1,8 +1,7 @@
 'use server';
 
 import { generateWord as aiGenerateWord } from '@/ai/flows/generate-word-flow';
-import { getApps, initializeApp, cert, type App } from 'firebase-admin/app';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue } from '@/lib/firebase-admin';
 import {
   levelToConstraints,
   normalizeWord,
@@ -10,25 +9,6 @@ import {
   getFallbackWord,
   type WordConstraints,
 } from './word-utils';
-
-// Initialize Firebase Admin
-function initAdminApp(): App {
-  if (getApps().length > 0) {
-    return getApps()[0];
-  }
-
-  const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT
-    ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
-    : {
-        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      };
-
-  return initializeApp({
-    credential: cert(serviceAccount),
-  });
-}
 
 /**
  * Robust Word Generator with Deterministic Control
@@ -50,12 +30,10 @@ interface GenerateWordResult {
 // Get recent used words from Firebase (last 80)
 async function getRecentUsedWords(userId: string | null): Promise<string[]> {
   if (!userId) {
-    console.log('[getRecentUsedWords] No userId provided');
     return [];
   }
   
   try {
-    initAdminApp();
     const firestore = getFirestore();
     const userProfileRef = firestore.collection('userProfiles').doc(userId);
     const userDoc = await userProfileRef.get();
@@ -134,7 +112,6 @@ async function saveUsedWord(userId: string | null, word: string): Promise<void> 
   if (!userId) return;
   
   try {
-    initAdminApp();
     const firestore = getFirestore();
     const userProfileRef = firestore.collection('userProfiles').doc(userId);
 

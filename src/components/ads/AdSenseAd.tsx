@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 interface AdSenseAdProps {
   adSlot: string;
@@ -11,31 +11,59 @@ interface AdSenseAdProps {
 
 /**
  * Google AdSense Ad Component
- * 
+ *
  * Usage:
  * <AdSenseAd adSlot="1234567890" />
- * 
- * Note: Make sure to add AdSense script to layout.tsx first
+ *
+ * Note: Ensure AdSense script is added in layout.tsx
  */
-export default function AdSenseAd({ 
-  adSlot, 
+export default function AdSenseAd({
+  adSlot,
   adFormat = 'auto',
   fullWidthResponsive = true,
-  className = ''
+  className = '',
 }: AdSenseAdProps) {
+  const adRef = useRef<HTMLModElement | null>(null);
+  const pushedRef = useRef(false);
+  const lastKeyRef = useRef<string | null>(null);
+
   useEffect(() => {
     try {
-      // Push ad to AdSense
-      // @ts-ignore
-      (window.adsbygoogle = window.adsbygoogle || []).push({});
+      if (typeof window !== 'undefined') {
+        const currentKey = `${adSlot}-${adFormat}-${fullWidthResponsive ? '1' : '0'}`;
+        if (lastKeyRef.current !== currentKey) {
+          lastKeyRef.current = currentKey;
+          pushedRef.current = false;
+        }
+
+        const adEl = adRef.current;
+        if (!adEl) {
+          return;
+        }
+
+        const status = adEl.getAttribute('data-adsbygoogle-status');
+        const adStatus = adEl.getAttribute('data-ad-status');
+        const hasIframe = adEl.querySelector('iframe') !== null;
+
+        if (pushedRef.current || status === 'done' || adStatus === 'filled' || hasIframe) {
+          pushedRef.current = true;
+          return;
+        }
+
+        // @ts-ignore
+        (window.adsbygoogle = window.adsbygoogle || []).push({});
+        pushedRef.current = true;
+      }
     } catch (err) {
       console.error('AdSense error:', err);
     }
-  }, []);
+  }, [adSlot, adFormat, fullWidthResponsive]);
 
   return (
     <div className={`adsense-container my-4 ${className}`}>
       <ins
+        ref={adRef}
+        key={`${adSlot}-${adFormat}-${fullWidthResponsive ? '1' : '0'}`}
         className="adsbygoogle"
         style={{ display: 'block' }}
         data-ad-client="ca-pub-2955575113938000"

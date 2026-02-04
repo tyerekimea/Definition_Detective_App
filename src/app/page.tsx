@@ -39,7 +39,7 @@ type Difficulty = "easy" | "medium" | "hard";
 const MAX_INCORRECT_TRIES = 6;
 
 export default function Home() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const firestore = useFirestore();
   const [gameState, setGameState] = useState<GameState>("playing");
   const [wordData, setWordData] = useState<WordData | null>(null);
@@ -83,6 +83,11 @@ export default function Home() {
 
   const startNewGame = useCallback(async (currentLevel: number, currentWord?: string) => {
     console.log('[startNewGame] Starting new game at level:', currentLevel);
+    if (authLoading && !user) {
+      console.log('[startNewGame] Waiting for auth to resolve before generating a word');
+      setIsGameLoading(true);
+      return;
+    }
     
     // Reset all game state immediately
     setIsGameLoading(true);
@@ -153,7 +158,7 @@ export default function Home() {
     }
     setIsGameLoading(false);
     console.log('[startNewGame] Game loading complete');
-  }, [toast, selectedTheme, user]);
+  }, [toast, selectedTheme, user, authLoading]);
 
   // Load user's theme preference
   useEffect(() => {
@@ -166,8 +171,9 @@ export default function Home() {
   }, [user]);
 
   useEffect(() => {
+    if (authLoading) return;
     startNewGame(1);
-  }, [startNewGame]);
+  }, [startNewGame, authLoading]);
 
   // Cleanup timeout on unmount
   useEffect(() => {

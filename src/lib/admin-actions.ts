@@ -1,7 +1,6 @@
 'use server';
 
-import { getAuth } from 'firebase-admin/auth';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getAuth, getFirestore, FieldValue } from '@/lib/firebase-admin';
 import { isAdmin } from './admin';
 
 /**

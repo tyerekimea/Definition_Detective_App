@@ -9,47 +9,42 @@ interface AdManagerProps {
 
 /**
  * Ad Manager Component
- * 
+ *
  * Displays Google AdSense ads at different locations
- * 
+ *
  * Usage:
  * <AdManager location="game-over" />
- * 
- * Your AdSense Client ID: ca-pub-2955575113938000
- * 
+ *
  * IMPORTANT: Replace placeholder slot IDs with real ones from AdSense dashboard
- * Go to: https://www.google.com/adsense/ → Ads → By ad unit → Create ad units
  */
 export default function AdManager({ location, className = '' }: AdManagerProps) {
-  // Ad configuration for different locations
-  // Real AdSense ad slot IDs from your dashboard
-  const adConfig = {
+  const adConfig: Record<AdManagerProps['location'], { slot: string; format: 'auto' | 'horizontal' | 'vertical' | 'rectangle' }> = {
     'game-over': {
-      slot: '3043059051', // Game Over Ad
-      format: 'auto' as const
+      slot: '3043059051', // Replace with real Game Over Ad slot ID
+      format: 'auto',
     },
     'level-complete': {
-      slot: '7657091487', // Level Complete Ad
-      format: 'horizontal' as const
+      slot: '7657091487', // Replace with real Level Complete Ad slot ID
+      format: 'horizontal',
     },
-    'store': {
-      slot: '7657091487', // Pricing/Store Ad
-      format: 'auto' as const
+    'pricing': {
+      slot: '8058925474', // Replace with real Store Ad slot ID
+      format: 'auto',
     },
     'sidebar': {
-      slot: '8058925474', // Sidebar Ad
-      format: 'vertical' as const
+      slot: '9876543210', // Replace with real Sidebar Ad slot ID
+      format: 'vertical',
     },
     'profile': {
-      slot: '8058925474', // Profile Ad
-      format: 'auto' as const
-    }
+      slot: '1122334455', // Replace with real Profile Ad slot ID
+      format: 'rectangle',
+    },
   };
 
   const config = adConfig[location];
 
   return (
-    <AdSenseAd 
+    <AdSenseAd
       adSlot={config.slot}
       adFormat={config.format}
       className={className}

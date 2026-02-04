@@ -1,50 +1,17 @@
 
 'use server';
 
-import { initializeApp, getApps, App } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getFirestore } from '@/lib/firebase-admin';
 import { generateHint } from '@/ai/flows/generate-hints';
 import { generateWord } from '@/ai/flows/generate-word-flow';
 import type { GenerateHintInput } from '@/ai/schemas/hint';
 import type { WordTheme } from '@/lib/game-data';
-
-// Helper function to initialize the admin app if it hasn't been already.
-function initAdminApp(): App {
-  if (getApps().length > 0) {
-    return getApps()[0];
-  }
-
-  // Check if FIREBASE_CONFIG is available and parse it.
-  let firebaseConfig: any = {};
-  
-  if (process.env.FIREBASE_CONFIG) {
-    try {
-      firebaseConfig = JSON.parse(process.env.FIREBASE_CONFIG);
-    } catch (e) {
-      console.error('Failed to parse FIREBASE_CONFIG:', e);
-    }
-  }
-  
-  // Fallback to individual environment variables
-  const projectId = firebaseConfig.projectId || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-  
-  if (!projectId) {
-    throw new Error('Firebase project ID not found. Set FIREBASE_CONFIG or NEXT_PUBLIC_FIREBASE_PROJECT_ID');
-  }
-  
-  // Use the parsed config to initialize the app.
-  // This is the standard way to initialize in App Hosting.
-  return initializeApp({
-    projectId: projectId,
-  });
-}
 
 export async function useHintAction(data: GenerateHintInput & { userId?: string | null, isFree?: boolean }): Promise<{ success: boolean; message?: string; hint?: string; }> {
   try {
     // Only check Firebase for paid hints (not free hints)
     if (!data.isFree && data.userId) {
       try {
-        initAdminApp();
         const firestore = getFirestore();
         const userProfileRef = firestore.collection('userProfiles').doc(data.userId);
 
@@ -152,7 +119,6 @@ async function deleteUsedWordsSubcollection(
 
 export async function clearUsedWords(userId: string): Promise<{ success: boolean; message?: string }> {
   try {
-    initAdminApp();
     const firestore = getFirestore();
     const userProfileRef = firestore.collection('userProfiles').doc(userId);
 
@@ -180,7 +146,6 @@ export async function updateUserTheme(params: {
   theme: WordTheme;
 }): Promise<{ success: boolean; message?: string }> {
   try {
-    initAdminApp();
     const firestore = getFirestore();
     const userProfileRef = firestore.collection('userProfiles').doc(params.userId);
 
@@ -201,7 +166,6 @@ export async function updateUserTheme(params: {
 // Get user's theme preference
 export async function getUserTheme(userId: string): Promise<{ theme: WordTheme; isPremium: boolean }> {
   try {
-    initAdminApp();
     const firestore = getFirestore();
     const userProfileRef = firestore.collection('userProfiles').doc(userId);
     const userDoc = await userProfileRef.get();

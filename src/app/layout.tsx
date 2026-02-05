@@ -33,6 +33,13 @@ export default function RootLayout({
           rel="stylesheet"
         />
         <meta name="theme-color" content="#0f172a" />
+        {/* Google AdSense Auto Ads Script */}
+        <Script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2955575113938000"
+          crossOrigin="anonymous"
+          strategy="beforeInteractive"
+        />
       </head>
       <body className="font-body antialiased bg-background text-foreground">
         <Providers>
@@ -41,14 +48,6 @@ export default function RootLayout({
             <main className="flex-1">{children}</main>
           </div>
         </Providers>
-
-        {/* Google AdSense Script */}
-        <Script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2955575113938000"
-          crossOrigin="anonymous"
-          strategy="afterInteractive"
-        />
       </body>
     </html>
   );

@@ -15,7 +15,7 @@ export default function AdSenseAd({
   fullWidthResponsive = true,
   className = '',
 }: AdSenseAdProps) {
-  const adRef = useRef<HTMLInsElement | null>(null);
+  const adRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     try {

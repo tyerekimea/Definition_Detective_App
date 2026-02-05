@@ -32,11 +32,11 @@ export default function AdManager({ location, className = '' }: AdManagerProps) 
       format: 'auto',
     },
     'sidebar': {
-      slot: '9876543210', // Replace with real Sidebar Ad slot ID
+      slot: '3830799602, // Replace with real Sidebar Ad slot ID
       format: 'vertical',
     },
     'profile': {
-      slot: '1122334455', // Replace with real Profile Ad slot ID
+      slot: '3439907620', // Replace with real Profile Ad slot ID
       format: 'rectangle',
     },
   };

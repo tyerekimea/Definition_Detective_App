@@ -32,6 +32,7 @@ import { Progress } from "@/components/ui/progress";
 import ShareButton from "@/components/game/share-button";
 import AdManager from "@/components/ads/AdManager";
 import GoogleAdsenseRewardedAd from "@/components/ads/GoogleAdsenseRewardedAd";
+import BackgroundMusicControls from "@/components/audio/BackgroundMusicControls";
 
 
 type GameState = "playing" | "won" | "lost";
@@ -553,6 +554,8 @@ export default function Home() {
       )}
 
       {gameContent()}
+
+      <BackgroundMusicControls />
       
       {/* Google AdSense Rewarded Ad Modal */}
       {showAdsenseAd && (

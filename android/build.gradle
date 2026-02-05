@@ -24,17 +24,36 @@ allprojects {
     }
 }
 
-// Ensure all Android modules compile with Java 17 (CI JDK compatibility).
+// Ensure all Android modules compile with Java 21.
 subprojects { proj ->
     afterEvaluate {
         if (proj.plugins.hasPlugin('com.android.application') || proj.plugins.hasPlugin('com.android.library')) {
             proj.android.compileOptions {
-                sourceCompatibility JavaVersion.VERSION_17
-                targetCompatibility JavaVersion.VERSION_17
+                sourceCompatibility JavaVersion.VERSION_21
+                targetCompatibility JavaVersion.VERSION_21
             }
         }
         proj.tasks.withType(JavaCompile).configureEach {
-            options.release.set(17)
+            sourceCompatibility = "21"
+            targetCompatibility = "21"
+            options.release.set(21)
+        }
+    }
+}
+
+// Explicitly override Capacitor Android module (node_modules) to Java 21.
+project(':capacitor-android') {
+    afterEvaluate {
+        if (plugins.hasPlugin('com.android.library')) {
+            android.compileOptions {
+                sourceCompatibility JavaVersion.VERSION_21
+                targetCompatibility JavaVersion.VERSION_21
+            }
+        }
+        tasks.withType(JavaCompile).configureEach {
+            sourceCompatibility = "21"
+            targetCompatibility = "21"
+            options.release.set(21)
         }
     }
 }

@@ -44,11 +44,11 @@ dependencies {
 
 apply from: 'capacitor.build.gradle'
 
-// Override generated Java 21 compileOptions to match common CI JDKs (17).
+// Override generated compileOptions to enforce Java 21.
 android {
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
     }
 }
 

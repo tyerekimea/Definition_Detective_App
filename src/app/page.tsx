@@ -30,7 +30,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Progress } from "@/components/ui/progress";
 import ShareButton from "@/components/game/share-button";
-import AdManager from "@/components/ads/AdManager";
 import GoogleAdsenseRewardedAd from "@/components/ads/GoogleAdsenseRewardedAd";
 import BackgroundMusicControls from "@/components/audio/BackgroundMusicControls";
 
@@ -484,7 +483,6 @@ export default function Home() {
               </div>
               </Alert>
               
-              <AdManager location="game-over" />
               </>
           ) : (
               <>

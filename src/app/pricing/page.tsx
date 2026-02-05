@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check, Zap, Star, Crown } from "lucide-react";
 import Link from "next/link";
-import AdManager from "@/components/ads/AdManager";
 
 export default function PricingPage() {
   return (
@@ -17,8 +16,6 @@ export default function PricingPage() {
           Unlock unlimited hints, remove ads, and get exclusive features
         </p>
       </div>
-
-      <AdManager location="store" />
 
       <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto mb-12">
         {/* Free Plan */}

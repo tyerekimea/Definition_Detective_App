@@ -5,9 +5,33 @@ import Header from '@/components/header';
 import Script from 'next/script';
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://traylapps.com'),
   title: 'Definition Detective',
   description: 'An endless word puzzle game with a twist.',
   manifest: '/manifest.json',
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    type: 'website',
+    url: 'https://traylapps.com/',
+    title: 'Definition Detective',
+    description: 'An endless word puzzle game with a twist.',
+    images: [
+      {
+        url: '/og.png',
+        width: 1200,
+        height: 630,
+        alt: 'Definition Detective',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Definition Detective',
+    description: 'An endless word puzzle game with a twist.',
+    images: ['/og.png'],
+  },
 };
 
 export default function RootLayout({
@@ -15,6 +39,23 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    name: "Definition Detective",
+    description: "An endless word puzzle game with a twist. Unscramble the definition and guess the word.",
+    url: "https://traylapps.com/",
+    applicationCategory: "GameApplication",
+    operatingSystem: "Web",
+    inLanguage: "en",
+    genre: "Word game",
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "USD",
+    },
+  };
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -39,6 +80,10 @@ export default function RootLayout({
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2955575113938000"
           crossOrigin="anonymous"
           strategy="beforeInteractive"
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
       </head>
       <body className="font-body antialiased bg-background text-foreground">

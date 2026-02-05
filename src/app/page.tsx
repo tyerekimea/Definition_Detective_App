@@ -529,6 +529,25 @@ export default function Home() {
         </p>
       </div>
 
+      <section className="w-full max-w-3xl">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-center">How to Play</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-muted-foreground">
+            <p>
+              Read the definition, then guess the word by choosing letters on the keyboard. You have 6 incorrect tries.
+            </p>
+            <ol className="list-decimal pl-5 space-y-2">
+              <li>Correct letters reveal their positions in the word.</li>
+              <li>Incorrect letters count against your remaining tries.</li>
+              <li>Use hints to reveal letters if you get stuck.</li>
+              <li>Win to advance levels and earn points (easy: 10, medium: 20, hard: 30).</li>
+            </ol>
+          </CardContent>
+        </Card>
+      </section>
+
       {/* Theme Selector */}
       {user && (
         <div className="w-full max-w-md">

@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { Puzzle, LogIn, LogOut, User, Volume2, VolumeX, ShoppingCart } from "lucide-react";
+import { Puzzle, LogIn, LogOut, User, Volume2, VolumeX } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -52,12 +52,6 @@ export default function Header() {
             >
               Pricing
             </Link>
-            <Link
-              href="/store"
-              className="transition-colors hover:text-foreground/80 text-foreground/60"
-            >
-              Store
-            </Link>
           </nav>
         </div>
         <div className="flex flex-1 items-center justify-end space-x-2">
@@ -94,12 +88,6 @@ export default function Header() {
                   <Link href="/profile">
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/store">
-                    <ShoppingCart className="mr-2 h-4 w-4" />
-                    <span>Store</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={logout}>

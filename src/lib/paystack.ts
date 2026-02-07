@@ -1,6 +1,27 @@
 import axios from 'axios';
 
-const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY!;
+const RAW_PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY ?? '';
+const PAYSTACK_SECRET_KEY = RAW_PAYSTACK_SECRET_KEY
+  .replace(/[\r\n]/g, '')
+  .trim()
+  .replace(/^['"]|['"]$/g, '');
+
+if (
+  RAW_PAYSTACK_SECRET_KEY !== PAYSTACK_SECRET_KEY &&
+  process.env.NODE_ENV !== 'production'
+) {
+  console.warn(
+    'PAYSTACK_SECRET_KEY contained extra whitespace/quotes or line breaks and was sanitized at runtime.'
+  );
+}
+
+if (!PAYSTACK_SECRET_KEY) {
+  throw new Error('PAYSTACK_SECRET_KEY is missing or empty');
+}
+
+if (/[\x00-\x1F\x7F]/.test(PAYSTACK_SECRET_KEY)) {
+  throw new Error('PAYSTACK_SECRET_KEY contains invalid control characters');
+}
 const PAYSTACK_BASE_URL = 'https://api.paystack.co';
 
 // Paystack API client

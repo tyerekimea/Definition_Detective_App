@@ -7,6 +7,7 @@ import {
   normalizeWord,
   isValidWord,
   getFallbackWord,
+  isThemeMatch,
   type WordConstraints,
 } from './word-utils';
 
@@ -193,6 +194,12 @@ export async function generateUniqueWord(params: {
         console.warn('[generateUniqueWord] Invalid word:', result.word, 'normalized:', normalized, 'constraints:', constraints);
         continue;
       }
+
+      // Ensure word matches the selected theme
+      if (!isThemeMatch(normalized, result.definition || '', theme)) {
+        console.warn('[generateUniqueWord] Word does not match theme:', theme, 'word:', normalized);
+        continue;
+      }
       
       // Check if already used
       if (usedWordsSet.has(normalized)) {
@@ -224,7 +231,7 @@ export async function generateUniqueWord(params: {
   // All AI attempts failed - use deterministic fallback
   console.warn('[generateUniqueWord] All AI attempts failed, using fallback');
   
-  const fallback = getFallbackWord(constraints, usedWordsSet);
+  const fallback = getFallbackWord(constraints, usedWordsSet, theme || 'current');
   await saveUsedWord(userId || null, fallback.word);
   
   return {

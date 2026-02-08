@@ -48,6 +48,7 @@ Difficulty Guidelines:
 
 Requirements:
 - The word MUST relate to the theme specified above
+- If theme is not "current", choose a technical noun clearly tied to the theme (avoid emotions, virtues, or generic abstract nouns)
 - The definition should be clear, concise, and dictionary-style
 - Ensure the word is appropriate for the difficulty level
 - Use only single words (no spaces, no hyphens)

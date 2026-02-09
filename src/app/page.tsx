@@ -65,6 +65,11 @@ export default function Home() {
     user ? doc(firestore, "userProfiles", user.uid) : null
   , [firestore, user]);
   const { data: userProfile, isLoading: profileLoading } = useDoc<UserProfile>(userProfileRef);
+  const hasUnlimitedHints =
+    Boolean(userProfile?.isPremium) ||
+    userProfile?.subscriptionStatus === 'active' ||
+    userProfile?.subscriptionStatus === 'expiring' ||
+    isPremium;
   
   useEffect(() => {
     if(userProfile) {
@@ -393,7 +398,9 @@ export default function Home() {
               </div>
               <div className="flex items-center gap-2 text-lg">
               <Lightbulb className="h-6 w-6 text-yellow-400" />
-              Hints: <span className="font-bold">{profileLoading ? '...' : userProfile?.hints ?? 0}</span>
+              Hints: <span className="font-bold">
+                {profileLoading ? '...' : (hasUnlimitedHints ? '∞' : (userProfile?.hints ?? 0))}
+              </span>
               </div>
               <div className="flex items-center gap-2 text-lg">
               Level: <span className="font-bold">{user ? level : 1}</span>

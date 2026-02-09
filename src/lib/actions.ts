@@ -22,7 +22,18 @@ export async function useHintAction(data: GenerateHintInput & { userId?: string 
             throw new Error('User profile not found.');
           }
 
-          const currentHints = userDoc.data()?.hints ?? 0;
+          const userData = userDoc.data() || {};
+          const isPremium =
+            Boolean(userData.isPremium) ||
+            userData.subscriptionStatus === 'active' ||
+            userData.subscriptionStatus === 'expiring';
+
+          // Premium users have unlimited hints, do not decrement.
+          if (isPremium) {
+            return { success: true };
+          }
+
+          const currentHints = userData.hints ?? 0;
 
           if (currentHints <= 0) {
             return { success: false, message: "You don't have any hints left." };

@@ -3,14 +3,18 @@
 echo "🚀 Building Definition Detective for Mobile..."
 echo ""
 
-# Step 1: Backup API routes
-echo "📦 Backing up API routes..."
-mkdir -p .mobile-build-backup
-cp -r src/app/api .mobile-build-backup/ 2>/dev/null || true
+# Step 1: Backup API routes and metadata routes
+echo "📦 Backing up API routes and metadata routes..."
+mkdir -p .mobile-build-backup/app
+cp -r src/app/api .mobile-build-backup/app/ 2>/dev/null || true
+cp src/app/sitemap.ts .mobile-build-backup/app/ 2>/dev/null || true
+cp src/app/robots.ts .mobile-build-backup/app/ 2>/dev/null || true
 
-# Step 2: Remove API routes temporarily
-echo "🗑️  Temporarily removing API routes..."
+# Step 2: Remove API routes and metadata routes temporarily
+echo "🗑️  Temporarily removing API routes and metadata routes..."
 rm -rf src/app/api
+rm -f src/app/sitemap.ts
+rm -f src/app/robots.ts
 
 # Step 3: Build with static export
 echo "🔨 Building static export..."
@@ -18,9 +22,11 @@ MOBILE_BUILD=true npm run build
 
 BUILD_STATUS=$?
 
-# Step 4: Restore API routes
-echo "♻️  Restoring API routes..."
-cp -r .mobile-build-backup/api src/app/ 2>/dev/null || true
+# Step 4: Restore API routes and metadata routes
+echo "♻️  Restoring API routes and metadata routes..."
+cp -r .mobile-build-backup/app/api src/app/ 2>/dev/null || true
+cp .mobile-build-backup/app/sitemap.ts src/app/ 2>/dev/null || true
+cp .mobile-build-backup/app/robots.ts src/app/ 2>/dev/null || true
 rm -rf .mobile-build-backup
 
 if [ $BUILD_STATUS -ne 0 ]; then

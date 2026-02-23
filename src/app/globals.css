@@ -42,8 +42,8 @@ body {
     --sidebar-accent-foreground: 262 52% 47%;
     --sidebar-border: 265 20% 80%;
     --sidebar-ring: 262 52% 47%;
-    --correct: 142 71% 45%;
-    --wrong: 0 84% 60%;
+    --correct: 151 27% 43%;
+    --wrong: 38 78% 55%;
   }
 
   .dark {
@@ -79,6 +79,8 @@ body {
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 217 33% 17%;
     --sidebar-ring: 210 40% 98%;
+    --correct: 152 31% 52%;
+    --wrong: 35 75% 60%;
   }
 
   .playful {
@@ -193,5 +195,58 @@ body {
 @layer utilities {
   .animate-pulse-slow {
     animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes tile-reveal {
+    0% {
+      opacity: 0;
+      transform: translateY(8px) scale(0.96);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes slot-pop {
+    0% {
+      transform: scale(1);
+    }
+    45% {
+      transform: scale(1.06);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  @keyframes feedback-shake {
+    15% {
+      transform: translateX(-2px);
+    }
+    35% {
+      transform: translateX(3px);
+    }
+    55% {
+      transform: translateX(-3px);
+    }
+    75% {
+      transform: translateX(2px);
+    }
+    100% {
+      transform: translateX(0);
+    }
+  }
+
+  .animate-tile-reveal {
+    animation: tile-reveal 220ms ease-out both;
+  }
+
+  .animate-slot-pop {
+    animation: slot-pop 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .animate-shake {
+    animation: feedback-shake 240ms ease-out;
   }
 }

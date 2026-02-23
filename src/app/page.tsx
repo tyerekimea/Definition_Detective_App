@@ -1,19 +1,32 @@
-
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useTransition, useRef } from "react";
-import { type WordData, type WordTheme, getRankForScore } from "@/lib/game-data";
-import { generateWord } from "@/ai/flows/generate-word-flow";
+import { type WordData, type WordTheme, getRankForScore, wordList } from "@/lib/game-data";
 import { generateImageDescription } from "@/ai/flows/generate-image-description-flow";
 import { useHintAction, generateWordWithTheme, updateUserTheme, getUserTheme } from "@/lib/actions";
+import { THEME_FALLBACK_WORDS } from "@/lib/word-utils";
 import { ThemeSelector } from "@/components/theme-selector";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Keyboard } from "@/components/game/keyboard";
-import { Lightbulb, RotateCw, XCircle, Award, PartyPopper, Clapperboard, Share, ArrowRight, Loader2 } from "lucide-react";
+import {
+  Lightbulb,
+  RotateCw,
+  XCircle,
+  Award,
+  PartyPopper,
+  Clapperboard,
+  Share,
+  ArrowRight,
+  Loader2,
+  CalendarDays,
+  Flame,
+  Sparkles,
+  Target,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useGameSounds } from "@/hooks/use-game-sounds";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
@@ -28,144 +41,336 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Progress } from "@/components/ui/progress";
 import ShareButton from "@/components/game/share-button";
 import GoogleAdsenseRewardedAd from "@/components/ads/GoogleAdsenseRewardedAd";
 import BackgroundMusicControls from "@/components/audio/BackgroundMusicControls";
 
-
 type GameState = "playing" | "won" | "lost";
 type Difficulty = "easy" | "medium" | "hard";
+type GameMode = "practice" | "daily";
+type GuessOutcome = "correct" | "incorrect" | null;
+
 const MAX_INCORRECT_TRIES = 6;
+const DAILY_PROGRESS_STORAGE_KEY = "definition-detective-daily-progress-v1";
+const DAILY_STREAK_STORAGE_KEY = "definition-detective-daily-streak-v1";
+const ONBOARDING_STORAGE_KEY = "definition-detective-onboarding-v1";
+
+interface DailyProgressSnapshot {
+  date: string;
+  guessedLetters: {
+    correct: string[];
+    incorrect: string[];
+  };
+  revealedByHint: string[];
+  hint: string | null;
+  visualHint: string | null;
+  gameState: GameState;
+}
+
+interface DailyStreakSnapshot {
+  current: number;
+  lastSolvedDate: string | null;
+  lastPlayedDate: string | null;
+}
+
+const DAILY_WORD_POOL: WordData[] = (() => {
+  const combined: WordData[] = [
+    ...THEME_FALLBACK_WORDS.current.easy.map((entry) => ({
+      word: entry.word,
+      definition: entry.definition,
+      difficulty: "easy" as const,
+      theme: "current" as const,
+    })),
+    ...THEME_FALLBACK_WORDS.current.medium.map((entry) => ({
+      word: entry.word,
+      definition: entry.definition,
+      difficulty: "medium" as const,
+      theme: "current" as const,
+    })),
+    ...THEME_FALLBACK_WORDS.current.hard.map((entry) => ({
+      word: entry.word,
+      definition: entry.definition,
+      difficulty: "hard" as const,
+      theme: "current" as const,
+    })),
+    ...wordList.map((entry) => ({
+      ...entry,
+      theme: "current" as const,
+    })),
+  ];
+
+  const seen = new Set<string>();
+  return combined.filter((entry) => {
+    const normalized = entry.word.toLowerCase();
+    if (seen.has(normalized)) return false;
+    seen.add(normalized);
+    return true;
+  });
+})();
+
+const getDailyDateKey = (date: Date = new Date()): string => date.toISOString().slice(0, 10);
+
+const hashString = (value: string): number => {
+  let hash = 2166136261;
+  for (let i = 0; i < value.length; i++) {
+    hash ^= value.charCodeAt(i);
+    hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
+  }
+  return hash >>> 0;
+};
+
+const getDailyWordForDate = (dateKey: string): WordData => {
+  const index = hashString(`definition-detective:${dateKey}`) % DAILY_WORD_POOL.length;
+  return DAILY_WORD_POOL[index];
+};
+
+const dayDiff = (fromDateKey: string, toDateKey: string): number => {
+  const from = Date.parse(`${fromDateKey}T00:00:00.000Z`);
+  const to = Date.parse(`${toDateKey}T00:00:00.000Z`);
+  if (Number.isNaN(from) || Number.isNaN(to)) return 0;
+  return Math.floor((to - from) / 86400000);
+};
+
+const getYesterdayKey = (dateKey: string): string => {
+  const date = new Date(`${dateKey}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() - 1);
+  return getDailyDateKey(date);
+};
+
+const readDailyStreakSnapshot = (): DailyStreakSnapshot => {
+  if (typeof window === "undefined") {
+    return { current: 0, lastSolvedDate: null, lastPlayedDate: null };
+  }
+
+  try {
+    const raw = window.localStorage.getItem(DAILY_STREAK_STORAGE_KEY);
+    if (!raw) {
+      return { current: 0, lastSolvedDate: null, lastPlayedDate: null };
+    }
+
+    const parsed = JSON.parse(raw) as DailyStreakSnapshot;
+    return {
+      current: Number.isFinite(parsed?.current) ? Math.max(0, parsed.current) : 0,
+      lastSolvedDate: parsed?.lastSolvedDate ?? null,
+      lastPlayedDate: parsed?.lastPlayedDate ?? null,
+    };
+  } catch {
+    return { current: 0, lastSolvedDate: null, lastPlayedDate: null };
+  }
+};
+
+const writeDailyStreakSnapshot = (snapshot: DailyStreakSnapshot) => {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(DAILY_STREAK_STORAGE_KEY, JSON.stringify(snapshot));
+};
 
 export default function Home() {
   const { user, loading: authLoading } = useAuth();
   const firestore = useFirestore();
+
+  const [gameMode, setGameMode] = useState<GameMode>("practice");
   const [gameState, setGameState] = useState<GameState>("playing");
   const [wordData, setWordData] = useState<WordData | null>(null);
   const [isGameLoading, setIsGameLoading] = useState(true);
-  const [guessedLetters, setGuessedLetters] = useState<{ correct: string[]; incorrect: string[] }>({ correct: [], incorrect: [] });
+  const [guessedLetters, setGuessedLetters] = useState<{ correct: string[]; incorrect: string[] }>({
+    correct: [],
+    incorrect: [],
+  });
   const [hint, setHint] = useState<string | null>(null);
   const [revealedByHint, setRevealedByHint] = useState<string[]>([]);
   const [score, setScore] = useState(0);
   const [level, setLevel] = useState(1);
   const [isHintLoading, startHintTransition] = useTransition();
-  const [isWatchingAd, setIsWatchingAd] = useState(false);
-  const [adProgress, setAdProgress] = useState(0);
   const [visualHint, setVisualHint] = useState<string | null>(null);
   const [isVisualHintLoading, setIsVisualHintLoading] = useState(false);
   const [showAdsenseAd, setShowAdsenseAd] = useState(false);
-  const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const [selectedTheme, setSelectedTheme] = useState<WordTheme>('current');
+  const [selectedTheme, setSelectedTheme] = useState<WordTheme>("current");
   const [isPremium, setIsPremium] = useState(false);
+  const [dailyDateKey, setDailyDateKey] = useState(getDailyDateKey());
+  const [dailyStreak, setDailyStreak] = useState(0);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [lastInteractedLetter, setLastInteractedLetter] = useState<string | null>(null);
+  const [lastGuessOutcome, setLastGuessOutcome] = useState<GuessOutcome>(null);
 
+  const guessAnimationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const selectedThemeRef = useRef<WordTheme>("current");
   const { playSound } = useGameSounds();
 
-  const userProfileRef = useMemoFirebase(() => 
-    user ? doc(firestore, "userProfiles", user.uid) : null
-  , [firestore, user]);
+  const userProfileRef = useMemoFirebase(() => (user ? doc(firestore, "userProfiles", user.uid) : null), [firestore, user]);
   const { data: userProfile, isLoading: profileLoading } = useDoc<UserProfile>(userProfileRef);
+
   const hasUnlimitedHints =
     Boolean(userProfile?.isPremium) ||
-    userProfile?.subscriptionStatus === 'active' ||
-    userProfile?.subscriptionStatus === 'expiring' ||
+    userProfile?.subscriptionStatus === "active" ||
+    userProfile?.subscriptionStatus === "expiring" ||
     isPremium;
-  
+
+  const { toast } = useToast();
+
   useEffect(() => {
-    if(userProfile) {
+    if (userProfile) {
       setScore(userProfile.totalScore);
       setLevel(userProfile.highestLevel);
     }
   }, [userProfile]);
 
-  const { toast } = useToast();
-  
-  const getDifficultyForLevel = (level: number): Difficulty => {
-    if (level <= 5) return 'easy';
-    if (level <= 10) return 'medium';
-    return 'hard';
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const hasSeenOnboarding = window.localStorage.getItem(ONBOARDING_STORAGE_KEY) === "1";
+    setShowOnboarding(!hasSeenOnboarding);
+  }, []);
+
+  useEffect(() => {
+    selectedThemeRef.current = selectedTheme;
+  }, [selectedTheme]);
+
+  useEffect(() => {
+    if (!lastGuessOutcome) return;
+
+    if (guessAnimationTimeoutRef.current) {
+      clearTimeout(guessAnimationTimeoutRef.current);
+    }
+
+    guessAnimationTimeoutRef.current = setTimeout(() => {
+      setLastGuessOutcome(null);
+      setLastInteractedLetter(null);
+    }, 450);
+
+    return () => {
+      if (guessAnimationTimeoutRef.current) {
+        clearTimeout(guessAnimationTimeoutRef.current);
+      }
+    };
+  }, [lastGuessOutcome]);
+
+  const getDifficultyForLevel = (currentLevel: number): Difficulty => {
+    if (currentLevel <= 5) return "easy";
+    if (currentLevel <= 10) return "medium";
+    return "hard";
   };
 
-  const startNewGame = useCallback(async (currentLevel: number, currentWord?: string) => {
-    console.log('[startNewGame] Starting new game at level:', currentLevel);
-    if (authLoading && !user) {
-      console.log('[startNewGame] Waiting for auth to resolve before generating a word');
-      setIsGameLoading(true);
-      return;
-    }
-    
-    // Reset all game state immediately
-    setIsGameLoading(true);
+  const resetRoundState = useCallback(() => {
     setGameState("playing");
     setGuessedLetters({ correct: [], incorrect: [] });
     setHint(null);
     setRevealedByHint([]);
     setVisualHint(null);
-    setWordData(null); // Clear old word data immediately
-    
-    const difficulty = getDifficultyForLevel(currentLevel);
-    let newWordData: WordData | null = null;
-    
-    try {
-        // Use robust word generator with level-based difficulty
-        console.log('[startNewGame] Generating word for level:', currentLevel);
-        
-        try {
-            const result = await generateWordWithTheme({
-                difficulty,
-                theme: selectedTheme,
-                userId: user?.uid || null,
-                level: currentLevel, // Pass level for deterministic difficulty
-                previousWord: currentWord, // Avoid immediate repeat
-            });
-            
-            console.log('[startNewGame] Generated word result:', result);
-            
-            if (!result.success || !result.word) {
-                throw new Error(result.message || 'Failed to generate word');
-            }
-            
-            console.log('[startNewGame] Generated word:', result.word);
-            newWordData = { 
-                word: result.word, 
-                definition: result.definition || '', 
-                difficulty,
-                theme: selectedTheme 
-            };
-        } catch (genError: any) {
-            console.error('[startNewGame] Word generation failed:', genError);
-            throw new Error(genError.message || 'Failed to generate a new word. Please try again.');
-        }
-        
-        if (!newWordData) {
-            throw new Error('Failed to generate a new word. Please refresh the page.');
-        }
-    } catch (error: any) {
-        console.error("[startNewGame] Failed to generate word:", error);
-        console.error("[startNewGame] Error details:", {
-            message: error?.message,
-            stack: error?.stack,
-            name: error?.name
+    setLastGuessOutcome(null);
+    setLastInteractedLetter(null);
+  }, []);
+
+  const startPracticeGame = useCallback(
+    async (currentLevel: number, currentWord?: string, themeOverride?: WordTheme) => {
+      console.log("[startPracticeGame] Starting practice game at level:", currentLevel);
+
+      if (authLoading && !user) {
+        setIsGameLoading(true);
+        return;
+      }
+
+      setIsGameLoading(true);
+      resetRoundState();
+      setWordData(null);
+
+      const difficulty = getDifficultyForLevel(currentLevel);
+      const themeToUse = themeOverride ?? selectedThemeRef.current;
+      let newWordData: WordData | null = null;
+
+      try {
+        const result = await generateWordWithTheme({
+          difficulty,
+          theme: themeToUse,
+          userId: user?.uid || null,
+          level: currentLevel,
+          previousWord: currentWord,
         });
+
+        if (!result.success || !result.word) {
+          throw new Error(result.message || "Failed to generate word");
+        }
+
+        newWordData = {
+          word: result.word,
+          definition: result.definition || "",
+          difficulty,
+          theme: themeToUse,
+        };
+      } catch (error: any) {
+        console.error("[startPracticeGame] Failed to generate word:", error);
         toast({
-            variant: "destructive",
-            title: "Word Generation Error",
-            description: error?.message || "Could not generate a new word. Please check your connection and API key."
+          variant: "destructive",
+          title: "Word Generation Error",
+          description: error?.message || "Could not generate a new word. Please check your connection and API key.",
         });
-        newWordData = null;
-    }
+      }
 
-    if(newWordData) {
-        console.log('[startNewGame] Setting new word data:', newWordData.word);
+      if (newWordData) {
         setWordData(newWordData);
-    } else {
-        console.error('[startNewGame] No word data available, game cannot continue');
-    }
-    setIsGameLoading(false);
-    console.log('[startNewGame] Game loading complete');
-  }, [toast, selectedTheme, user, authLoading]);
+      }
+      setIsGameLoading(false);
+    },
+    [toast, user, authLoading, resetRoundState]
+  );
 
-  // Load user's theme preference
+  const loadDailyChallenge = useCallback(
+    (dateKeyOverride?: string) => {
+      const dateKey = dateKeyOverride ?? getDailyDateKey();
+      const todayWord = getDailyWordForDate(dateKey);
+
+      setIsGameLoading(true);
+      setGameMode("daily");
+      setDailyDateKey(dateKey);
+      resetRoundState();
+      setWordData(todayWord);
+
+      const streakSnapshot = readDailyStreakSnapshot();
+      if (streakSnapshot.lastPlayedDate && dayDiff(streakSnapshot.lastPlayedDate, dateKey) > 1) {
+        streakSnapshot.current = 0;
+        writeDailyStreakSnapshot(streakSnapshot);
+      }
+      setDailyStreak(streakSnapshot.current);
+
+      if (typeof window !== "undefined") {
+        try {
+          const rawProgress = window.localStorage.getItem(DAILY_PROGRESS_STORAGE_KEY);
+          if (rawProgress) {
+            const parsed = JSON.parse(rawProgress) as DailyProgressSnapshot;
+            if (parsed.date === dateKey) {
+              setGuessedLetters(parsed.guessedLetters);
+              setRevealedByHint(parsed.revealedByHint ?? []);
+              setHint(parsed.hint ?? null);
+              setVisualHint(parsed.visualHint ?? null);
+              setGameState(parsed.gameState ?? "playing");
+            }
+          }
+        } catch (error) {
+          console.warn("[loadDailyChallenge] Could not restore daily progress:", error);
+        }
+      }
+
+      setIsGameLoading(false);
+    },
+    [resetRoundState]
+  );
+
+  const updateDailyStreak = useCallback((result: "won" | "lost", dateKey: string) => {
+    const snapshot = readDailyStreakSnapshot();
+
+    if (result === "won") {
+      if (snapshot.lastSolvedDate !== dateKey) {
+        const yesterdayKey = getYesterdayKey(dateKey);
+        snapshot.current = snapshot.lastSolvedDate === yesterdayKey ? snapshot.current + 1 : 1;
+        snapshot.lastSolvedDate = dateKey;
+      }
+    } else if (snapshot.lastSolvedDate !== dateKey) {
+      snapshot.current = 0;
+    }
+
+    snapshot.lastPlayedDate = dateKey;
+    writeDailyStreakSnapshot(snapshot);
+    setDailyStreak(snapshot.current);
+  }, []);
+
   useEffect(() => {
     if (user?.uid) {
       getUserTheme(user.uid).then(({ theme, isPremium: premium }) => {
@@ -177,100 +382,139 @@ export default function Home() {
 
   useEffect(() => {
     if (authLoading) return;
-    startNewGame(1);
-  }, [startNewGame, authLoading]);
+    startPracticeGame(1);
+  }, [startPracticeGame, authLoading]);
 
-  // Cleanup timeout on unmount
   useEffect(() => {
-    return () => {
-      if (transitionTimeoutRef.current) {
-        console.log('[Game] Cleaning up transition timeout on unmount');
-        clearTimeout(transitionTimeoutRef.current);
+    if (gameMode !== "daily") return;
+
+    const intervalId = setInterval(() => {
+      const today = getDailyDateKey();
+      if (today !== dailyDateKey) {
+        loadDailyChallenge(today);
       }
+    }, 60000);
+
+    return () => clearInterval(intervalId);
+  }, [gameMode, dailyDateKey, loadDailyChallenge]);
+
+  useEffect(() => {
+    if (gameMode !== "daily" || !wordData || typeof window === "undefined") return;
+
+    const snapshot: DailyProgressSnapshot = {
+      date: dailyDateKey,
+      guessedLetters,
+      revealedByHint,
+      hint,
+      visualHint,
+      gameState,
     };
-  }, []);
 
+    window.localStorage.setItem(DAILY_PROGRESS_STORAGE_KEY, JSON.stringify(snapshot));
+  }, [gameMode, wordData, dailyDateKey, guessedLetters, revealedByHint, hint, visualHint, gameState]);
 
-  const handleGuess = useCallback((letter: string) => {
-    const lowerLetter = letter.toLowerCase();
+  const handleGuess = useCallback(
+    (letter: string) => {
+      const lowerLetter = letter.toLowerCase();
 
-    if (gameState !== "playing" || guessedLetters.correct.includes(lowerLetter) || guessedLetters.incorrect.includes(lowerLetter) || revealedByHint.includes(lowerLetter)) {
-      return;
-    }
+      if (
+        gameState !== "playing" ||
+        guessedLetters.correct.includes(lowerLetter) ||
+        guessedLetters.incorrect.includes(lowerLetter) ||
+        revealedByHint.includes(lowerLetter)
+      ) {
+        return;
+      }
 
-    if (wordData?.word.toLowerCase().includes(lowerLetter)) {
-      setGuessedLetters(prev => ({ ...prev, correct: [...prev.correct, lowerLetter] }));
-      playSound('correct');
-    } else {
-      setGuessedLetters(prev => ({ ...prev, incorrect: [...prev.incorrect, lowerLetter] }));
-      playSound('incorrect');
-    }
-  }, [wordData, gameState, guessedLetters, playSound, revealedByHint]);
+      if (showOnboarding && typeof window !== "undefined") {
+        setShowOnboarding(false);
+        window.localStorage.setItem(ONBOARDING_STORAGE_KEY, "1");
+      }
+
+      setLastInteractedLetter(lowerLetter);
+
+      if (wordData?.word.toLowerCase().includes(lowerLetter)) {
+        setGuessedLetters((prev) => ({ ...prev, correct: [...prev.correct, lowerLetter] }));
+        setLastGuessOutcome("correct");
+        playSound("correct");
+      } else {
+        setGuessedLetters((prev) => ({ ...prev, incorrect: [...prev.incorrect, lowerLetter] }));
+        setLastGuessOutcome("incorrect");
+
+        if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+          navigator.vibrate(24);
+        }
+
+        playSound("incorrect");
+      }
+    },
+    [wordData, gameState, guessedLetters, playSound, revealedByHint, showOnboarding]
+  );
 
   const getHint = async (isFree: boolean = false) => {
     if (!wordData) return;
     if (!user && !isFree) {
-        toast({
-            variant: "destructive",
-            title: "Login Required",
-            description: "You must be logged in to use hints or watch ads.",
-        });
-        return;
+      toast({
+        variant: "destructive",
+        title: "Login Required",
+        description: "You must be logged in to use hints or watch ads.",
+      });
+      return;
     }
-    
+
     startHintTransition(async () => {
       try {
-        console.log('[getHint] Starting hint generation...');
-        
-        // Add timeout to prevent infinite loading
         const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Hint generation timed out. Please try again.')), 60000);
+          setTimeout(() => reject(new Error("Hint generation timed out. Please try again.")), 60000);
         });
-        
+
         const hintPromise = useHintAction({
-            userId: user ? user.uid : null,
-            word: wordData.word,
-            wordLength: wordData.word.length,
-            incorrectGuesses: guessedLetters.incorrect.join(''),
-            lettersToReveal: revealedByHint.length + 1,
-            isFree,
+          userId: user ? user.uid : null,
+          word: wordData.word,
+          wordLength: wordData.word.length,
+          incorrectGuesses: guessedLetters.incorrect.join(""),
+          lettersToReveal: revealedByHint.length + 1,
+          isFree,
         });
-        
-        const result = await Promise.race([hintPromise, timeoutPromise]) as any;
-        
-        console.log('[getHint] Hint result:', result);
+
+        const result = (await Promise.race([hintPromise, timeoutPromise])) as any;
 
         if (result && result.success && result.hint) {
           setHint(result.hint);
-          const newHintedLetters = result.hint.split('').filter((char: string) => char !== '_').map((char: string) => char.toLowerCase());
+          const newHintedLetters = result.hint
+            .split("")
+            .filter((char: string) => char !== "_")
+            .map((char: string) => char.toLowerCase());
           setRevealedByHint(newHintedLetters);
-          playSound('hint');
-          console.log('[getHint] Hint applied successfully');
+          playSound("hint");
         } else {
-           throw new Error(result.message || "Invalid response from server.");
+          throw new Error(result.message || "Invalid response from server.");
         }
       } catch (error: any) {
-         console.error('[getHint] Error:', error);
-         toast({
-            variant: "destructive",
-            title: "Hint Error",
-            description: error.message || 'Failed to get a hint. Please try again.',
-          });
+        toast({
+          variant: "destructive",
+          title: "Hint Error",
+          description: error.message || "Failed to get a hint. Please try again.",
+        });
       }
     });
   };
 
   const handleRewardedAd = () => {
     if (!user) {
-        toast({ variant: "destructive", title: "Login Required", description: "You must log in to watch an ad for a hint."});
-        return;
+      toast({
+        variant: "destructive",
+        title: "Login Required",
+        description: "You must log in to watch an ad for a hint.",
+      });
+      return;
     }
     setShowAdsenseAd(true);
   };
 
   const handleAdComplete = () => {
     setShowAdsenseAd(false);
-    getHint(true); // Give free hint after ad is watched
+    getHint(true);
   };
 
   const handleAdSkipped = () => {
@@ -284,7 +528,7 @@ export default function Home() {
 
   const handleAdError = (error: Error) => {
     setShowAdsenseAd(false);
-    console.error('Ad error:', error);
+    console.error("Ad error:", error);
   };
 
   const getVisualHint = async () => {
@@ -293,7 +537,7 @@ export default function Home() {
     try {
       const result = await generateImageDescription({ word: wordData.word });
       setVisualHint(result.description);
-    } catch (error) {
+    } catch {
       toast({
         variant: "destructive",
         title: "Visual Hint Error",
@@ -305,258 +549,374 @@ export default function Home() {
 
   const displayedWord = useMemo<{ char: string; revealed: boolean }[]>(() => {
     if (!wordData) return [];
-    const wordChars = wordData.word.split('');
-    return wordChars.map((char: string) => {
+
+    return wordData.word.split("").map((char) => {
       const lowerChar = char.toLowerCase();
       const isGuessed = guessedLetters.correct.includes(lowerChar);
       const isHinted = revealedByHint.includes(lowerChar);
-      if (isGuessed || isHinted) {
-        return { char, revealed: true };
-      }
-      return { char, revealed: false };
+      return { char, revealed: isGuessed || isHinted };
     });
   }, [wordData, guessedLetters.correct, revealedByHint]);
 
-  const updateFirestoreUser = useCallback(async (scoreGained: number, newLevel: number) => {
-    if (user && firestore) {
+  const updateFirestoreUser = useCallback(
+    async (scoreGained: number, newLevel: number) => {
+      if (user && firestore) {
         const userRef = doc(firestore, "userProfiles", user.uid);
-        
+
         const userDoc = await getDoc(userRef);
         const currentScore = userDoc.data()?.totalScore ?? 0;
         const newTotalScore = currentScore + scoreGained;
         const newRank = getRankForScore(newTotalScore);
-        
+
         const updateData = {
-            totalScore: increment(scoreGained),
-            highestLevel: newLevel,
-            rank: newRank,
-            updatedAt: serverTimestamp(),
+          totalScore: increment(scoreGained),
+          highestLevel: newLevel,
+          rank: newRank,
+          updatedAt: serverTimestamp(),
         };
 
-        updateDoc(userRef, updateData)
-          .catch(() => {
-                const permissionError = new FirestorePermissionError({
-                    path: userRef.path,
-                    operation: 'update',
-                    requestResourceData: updateData,
-                });
-                errorEmitter.emit('permission-error', permissionError);
-            });
-    }
-  }, [user, firestore]);
+        updateDoc(userRef, updateData).catch(() => {
+          const permissionError = new FirestorePermissionError({
+            path: userRef.path,
+            operation: "update",
+            requestResourceData: updateData,
+          });
+          errorEmitter.emit("permission-error", permissionError);
+        });
+      }
+    },
+    [user, firestore]
+  );
 
   useEffect(() => {
-    if (!wordData) return;
-    
-    // Only check win/loss conditions when in playing state
-    if (gameState !== "playing") return;
-  
-    const isWon = displayedWord.every(item => item.revealed);
-    
+    if (!wordData || gameState !== "playing") return;
+
+    const isWon = displayedWord.every((item) => item.revealed);
+
     if (isWon) {
-      console.log('[Game] Player won! Starting transition to next level...');
       setGameState("won");
-      playSound('win');
-      
+      playSound("win");
+
+      if (gameMode === "daily") {
+        updateDailyStreak("won", dailyDateKey);
+        return;
+      }
+
       const difficulty = getDifficultyForLevel(level);
-      const scoreGained = (difficulty === 'easy' ? 10 : difficulty === 'medium' ? 20 : 30);
-      
+      const scoreGained = difficulty === "easy" ? 10 : difficulty === "medium" ? 20 : 30;
       const newLevel = level + 1;
+
       if (user) {
         updateFirestoreUser(scoreGained, newLevel);
       }
-      setScore(s => s + scoreGained);
-      
-      console.log(`[Game] Player won! Waiting for user to continue...`);
-      
-      // Don't auto-advance - let user click "Next Level" button
-      // The button will call startNewGame manually
-  
-    } else if (guessedLetters.incorrect.length >= MAX_INCORRECT_TRIES) {
-      setGameState("lost");
-      playSound('incorrect');
+      setScore((prevScore) => prevScore + scoreGained);
+      return;
     }
-  }, [guessedLetters, wordData, level, playSound, startNewGame, updateFirestoreUser, gameState, displayedWord, user]);
+
+    if (guessedLetters.incorrect.length >= MAX_INCORRECT_TRIES) {
+      setGameState("lost");
+      playSound("incorrect");
+
+      if (gameMode === "daily") {
+        updateDailyStreak("lost", dailyDateKey);
+      }
+    }
+  }, [
+    guessedLetters,
+    wordData,
+    level,
+    playSound,
+    updateFirestoreUser,
+    gameState,
+    displayedWord,
+    user,
+    gameMode,
+    dailyDateKey,
+    updateDailyStreak,
+  ]);
 
   const gameContent = () => {
     if (isGameLoading || !wordData) {
-        return <div className="text-center p-8 animate-pulse">Loading your next case...</div>;
+      return (
+        <div className="text-center p-8 animate-pulse text-muted-foreground">
+          {gameMode === "daily" ? "Loading today's daily challenge..." : "Loading your next practice case..."}
+        </div>
+      );
     }
 
     const incorrectTriesLeft = MAX_INCORRECT_TRIES - guessedLetters.incorrect.length;
-    const allLettersGuessed = wordData && displayedWord.every(item => item.revealed);
+    const allLettersGuessed = displayedWord.every((item) => item.revealed);
     const hintDisabled = isHintLoading || allLettersGuessed || !user || profileLoading;
 
-    const shareText = "I'm playing Definition Detective! Can you beat my high score?";
+    const dailyShareText = `Definition Detective Daily ${dailyDateKey}\n${
+      gameState === "won" ? "Solved" : "Not solved"
+    } | Wrong: ${guessedLetters.incorrect.length}/${MAX_INCORRECT_TRIES}\nStreak: ${dailyStreak}`;
+
+    const practiceShareText = "I'm playing Definition Detective! Can you beat my high score?";
+    const shareText = gameMode === "daily" && gameState !== "playing" ? dailyShareText : practiceShareText;
 
     return (
-        <div className="w-full max-w-4xl mx-auto space-y-8">
-          <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2 text-lg">
-              <Award className="h-6 w-6 text-primary" />
-              Score: <span className="font-bold">{(user ? score : 0).toLocaleString()}</span>
-              </div>
-              <div className="flex items-center gap-2 text-lg">
-              <Lightbulb className="h-6 w-6 text-yellow-400" />
-              Hints: <span className="font-bold">
-                {profileLoading ? '...' : (hasUnlimitedHints ? '∞' : (userProfile?.hints ?? 0))}
-              </span>
-              </div>
-              <div className="flex items-center gap-2 text-lg">
-              Level: <span className="font-bold">{user ? level : 1}</span>
-              </div>
+      <div className="w-full max-w-4xl mx-auto space-y-8">
+        <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3 sm:text-base">
+          <div className="flex items-center justify-center gap-2 rounded-lg border bg-card p-3">
+            <Award className="h-5 w-5 text-primary" />
+            Score: <span className="font-semibold">{(user ? score : 0).toLocaleString()}</span>
           </div>
-
-          <Card>
-              <CardHeader>
-              <CardTitle className="text-center">Definition</CardTitle>
-              </CardHeader>
-              <CardContent>
-              <p className="text-center text-lg italic text-muted-foreground p-4 bg-muted/50 rounded-md">{wordData.definition}</p>
-              </CardContent>
-          </Card>
-
-          {visualHint && (
-            <Card className="bg-muted/30 border-dashed">
-              <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Visual Clue</CardTitle></CardHeader>
-              <CardContent>
-                <p className="italic">{visualHint}</p>
-              </CardContent>
-            </Card>
-          )}
-
-          <div className="flex justify-center items-center gap-2 md:gap-4 my-8">
-              {displayedWord.map(({ char, revealed }, index) => (
-              <div key={index} className="flex items-center justify-center h-12 w-12 md:h-16 md:w-16 border-b-4 border-primary text-3xl md:text-4xl font-bold uppercase bg-muted/30 rounded-md">
-                  {revealed && <span className="animate-in fade-in zoom-in-50 duration-500">{char}</span>}
-              </div>
-              ))}
+          <div className="flex items-center justify-center gap-2 rounded-lg border bg-card p-3">
+            <Lightbulb className="h-5 w-5 text-amber-500" />
+            Hints:
+            <span className="font-semibold">{profileLoading ? "..." : hasUnlimitedHints ? "Unlimited" : userProfile?.hints ?? 0}</span>
           </div>
-          
-          {(gameState === "won" || gameState === "lost") ? (
-              <>
-              <Alert variant={gameState === 'won' ? 'default' : 'destructive'} className="text-center">
-              {gameState === 'won' ? <PartyPopper className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
-              <AlertTitle className="text-2xl font-bold">
-                  {gameState === 'won' ? "You solved it!" : "Case closed... incorrectly."}
-              </AlertTitle>
-              <AlertDescription>
-                  {gameState === 'won' ? (
-                    <>
-                      The word was "{wordData?.word}". 
-                      {isGameLoading ? ' Loading next case...' : ' Ready for next case!'}
-                    </>
-                  ) : (
-                    `The word was "${wordData?.word}". Better luck next time.`
-                  )}
-              </AlertDescription>
-
-              <div className="mt-4 flex justify-center gap-4">
-                  {gameState === 'won' && (
-                      <Button 
-                        onClick={() => {
-                          console.log('[Next Case Button] Clicked, current level:', level);
-                          const newLevel = level + 1;
-                          console.log('[Next Case Button] Setting new level:', newLevel);
-                          setLevel(newLevel);
-                          setGameState("playing");
-                          console.log('[Next Case Button] Calling startNewGame');
-                          startNewGame(newLevel, wordData?.word);
-                        }}
-                        disabled={isGameLoading}
-                      >
-                          {isGameLoading ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Loading...
-                            </>
-                          ) : (
-                            <>
-                              <ArrowRight className="mr-2 h-4 w-4" />
-                              Next Case
-                            </>
-                          )}
-                      </Button>
-                  )}
-                  {gameState === 'lost' && (
-                      <Button onClick={() => {
-                        console.log('[Retry Button] Clicked, retrying level:', level);
-                        setGameState("playing");
-                        startNewGame(level, wordData?.word);
-                      }}>
-                          <RotateCw className="mr-2 h-4 w-4" /> Retry Level
-                      </Button>
-                  )}
-              </div>
-              </Alert>
-              
-              </>
-          ) : (
-              <>
-              <div className="flex flex-wrap justify-center gap-4">
-                  <Button onClick={() => getHint(false)} disabled={hintDisabled}>
-                  <Lightbulb className={cn("mr-2 h-4 w-4", isHintLoading && !isWatchingAd && "animate-spin")} />
-                  {isHintLoading && !isWatchingAd ? 'Getting Hint...' : 'Use a Hint'}
-                  </Button>
-                  <Button onClick={handleRewardedAd} disabled={isHintLoading || allLettersGuessed || showAdsenseAd} variant="outline">
-                  <Clapperboard className={cn("mr-2 h-4 w-4", showAdsenseAd && "animate-spin")} />
-                  {showAdsenseAd ? 'Loading Ad...' : 'Watch Ad for Hint'}
-                  </Button>
-                  <Button onClick={getVisualHint} disabled={isVisualHintLoading || !!visualHint} variant="secondary">
-                    <Share className={cn("mr-2 h-4 w-4", isVisualHintLoading && "animate-spin")} />
-                    {isVisualHintLoading ? 'Generating...' : 'Visual Clue'}
-                  </Button>
-              </div>
-              {!user && <p className="text-center text-sm text-muted-foreground">Please log in to use hints and save progress.</p>}
-              <p className="text-center text-muted-foreground">Incorrect Guesses: {guessedLetters.incorrect.join(', ').toUpperCase()} ({incorrectTriesLeft} left)</p>
-              <Keyboard onKeyClick={handleGuess} guessedLetters={guessedLetters} revealedByHint={revealedByHint} />
-              </>
-          )}
-
-          <div className="mt-12 pt-8 border-t border-dashed">
-              <p className="text-sm font-medium flex items-center justify-center gap-2 mb-4 text-muted-foreground"><Share className="h-4 w-4" /> Share The Game!</p>
-              <div className="flex justify-center gap-2">
-              <ShareButton platform="whatsapp" text={shareText} />
-              <ShareButton platform="facebook" text={shareText} />
-              <ShareButton platform="x" text={shareText} />
-              </div>
+          <div className="flex items-center justify-center gap-2 rounded-lg border bg-card p-3">
+            {gameMode === "daily" ? <Flame className="h-5 w-5 text-primary" /> : <Target className="h-5 w-5 text-primary" />}
+            {gameMode === "daily" ? "Streak" : "Level"}:
+            <span className="font-semibold">{gameMode === "daily" ? dailyStreak : user ? level : 1}</span>
           </div>
         </div>
+
+        {showOnboarding && gameState === "playing" && (
+          <Card className="border-primary/40 bg-primary/5">
+            <CardContent className="flex flex-col gap-3 py-4 text-sm">
+              <p className="flex items-center gap-2 font-semibold text-primary">
+                <Sparkles className="h-4 w-4" />
+                Quick Start
+              </p>
+              <p className="text-muted-foreground">Read the definition card, then tap one letter to begin. You only get six misses.</p>
+              <div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setShowOnboarding(false);
+                    if (typeof window !== "undefined") {
+                      window.localStorage.setItem(ONBOARDING_STORAGE_KEY, "1");
+                    }
+                  }}
+                >
+                  Start Playing
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        <Card aria-labelledby="definition-title">
+          <CardHeader>
+            <CardTitle id="definition-title" className="text-center flex items-center justify-center gap-2">
+              {gameMode === "daily" && <CalendarDays className="h-5 w-5 text-primary" />}
+              {gameMode === "daily" ? `Daily Definition (${dailyDateKey})` : "Definition"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p
+              className="rounded-md bg-muted/50 p-4 text-center font-sans text-lg text-muted-foreground"
+              aria-live="polite"
+              aria-label="Word definition clue"
+            >
+              {wordData.definition}
+            </p>
+          </CardContent>
+        </Card>
+
+        {visualHint && (
+          <Card className="bg-muted/30 border-dashed">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Visual Clue</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="italic">{visualHint}</p>
+            </CardContent>
+          </Card>
+        )}
+
+        <div
+          className={cn(
+            "my-8 flex flex-wrap items-center justify-center gap-2 md:gap-4",
+            lastGuessOutcome === "incorrect" && "animate-shake",
+            lastGuessOutcome === "correct" && "animate-slot-pop"
+          )}
+        >
+          {displayedWord.map(({ char, revealed }, index) => (
+            <div
+              key={index}
+              className="flex h-12 w-12 items-center justify-center rounded-md border-b-4 border-primary bg-muted/30 font-mono text-3xl font-bold uppercase md:h-16 md:w-16 md:text-4xl"
+            >
+              {revealed && <span className="animate-tile-reveal">{char}</span>}
+            </div>
+          ))}
+        </div>
+
+        {gameState === "won" || gameState === "lost" ? (
+          <Alert variant={gameState === "won" ? "default" : "destructive"} className="text-center">
+            {gameState === "won" ? <PartyPopper className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+            <AlertTitle className="text-2xl font-bold">
+              {gameMode === "daily"
+                ? gameState === "won"
+                  ? "Daily challenge solved"
+                  : "Daily challenge complete"
+                : gameState === "won"
+                ? "You solved it"
+                : "Case closed... incorrectly"}
+            </AlertTitle>
+            <AlertDescription>
+              {gameMode === "daily"
+                ? `The daily word for ${dailyDateKey} was "${wordData.word}". ${
+                    gameState === "won" ? "Come back tomorrow to keep your streak alive." : "A new puzzle unlocks tomorrow."
+                  }`
+                : gameState === "won"
+                ? `The word was "${wordData.word}". Ready for the next case?`
+                : `The word was "${wordData.word}". Better luck next time.`}
+            </AlertDescription>
+
+            <div className="mt-4 flex flex-wrap justify-center gap-3">
+              {gameMode === "daily" ? (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setGameMode("practice");
+                      startPracticeGame(level, wordData.word);
+                    }}
+                  >
+                    <ArrowRight className="mr-2 h-4 w-4" />
+                    Switch to Practice
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => loadDailyChallenge(getDailyDateKey())}
+                    disabled={dailyDateKey === getDailyDateKey()}
+                  >
+                    <RotateCw className="mr-2 h-4 w-4" />
+                    Check New Daily
+                  </Button>
+                </>
+              ) : (
+                <>
+                  {gameState === "won" && (
+                    <Button
+                      onClick={() => {
+                        const newLevel = level + 1;
+                        setLevel(newLevel);
+                        setGameState("playing");
+                        startPracticeGame(newLevel, wordData.word);
+                      }}
+                      disabled={isGameLoading}
+                    >
+                      {isGameLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Loading...
+                        </>
+                      ) : (
+                        <>
+                          <ArrowRight className="mr-2 h-4 w-4" />
+                          Next Case
+                        </>
+                      )}
+                    </Button>
+                  )}
+                  {gameState === "lost" && (
+                    <Button
+                      onClick={() => {
+                        setGameState("playing");
+                        startPracticeGame(level, wordData.word);
+                      }}
+                    >
+                      <RotateCw className="mr-2 h-4 w-4" /> Retry Level
+                    </Button>
+                  )}
+                </>
+              )}
+            </div>
+          </Alert>
+        ) : (
+          <>
+            <div className="flex flex-wrap justify-center gap-4">
+              <Button onClick={() => getHint(false)} disabled={hintDisabled}>
+                <Lightbulb className={cn("mr-2 h-4 w-4", isHintLoading && "animate-spin")} />
+                {isHintLoading ? "Getting Hint..." : "Use a Hint"}
+              </Button>
+              <Button
+                onClick={handleRewardedAd}
+                disabled={isHintLoading || allLettersGuessed || showAdsenseAd}
+                variant="outline"
+              >
+                <Clapperboard className={cn("mr-2 h-4 w-4", showAdsenseAd && "animate-spin")} />
+                {showAdsenseAd ? "Loading Ad..." : "Watch Ad for Hint"}
+              </Button>
+              <Button onClick={getVisualHint} disabled={isVisualHintLoading || !!visualHint} variant="secondary">
+                <Share className={cn("mr-2 h-4 w-4", isVisualHintLoading && "animate-spin")} />
+                {isVisualHintLoading ? "Generating..." : "Visual Clue"}
+              </Button>
+            </div>
+
+            {!user && <p className="text-center text-sm text-muted-foreground">Please log in to use hints and save progress.</p>}
+
+            <p className="text-center text-muted-foreground">
+              Incorrect Guesses: {guessedLetters.incorrect.join(", ").toUpperCase() || "None"} ({incorrectTriesLeft} left)
+            </p>
+
+            <div className="mx-auto w-full max-w-[560px]">
+              <Keyboard
+                onKeyClick={handleGuess}
+                guessedLetters={guessedLetters}
+                revealedByHint={revealedByHint}
+                lastInteractedLetter={lastInteractedLetter}
+                lastGuessOutcome={lastGuessOutcome}
+              />
+            </div>
+          </>
+        )}
+
+        <div className="mt-12 border-t border-dashed pt-8">
+          <p className="mb-4 flex items-center justify-center gap-2 text-sm font-medium text-muted-foreground">
+            <Share className="h-4 w-4" /> Share The Game
+          </p>
+          <div className="flex justify-center gap-2">
+            <ShareButton platform="whatsapp" text={shareText} />
+            <ShareButton platform="facebook" text={shareText} />
+            <ShareButton platform="x" text={shareText} />
+          </div>
+        </div>
+      </div>
     );
-  }
+  };
 
   return (
     <div className="container mx-auto flex flex-col items-center justify-center gap-8 py-8 md:py-12">
       <div className="text-center">
-        <h1 className="text-4xl font-bold tracking-tight text-primary sm:text-5xl lg:text-6xl font-headline">
-          Definition Detective
-        </h1>
+        <h1 className="font-headline text-4xl font-bold tracking-tight text-primary sm:text-5xl lg:text-6xl">Definition Detective</h1>
         <p className="mt-4 max-w-2xl text-lg text-foreground/80">
-          Unscramble the definition and guess the word. Put your vocabulary to the test!
+          A text-first word puzzle tuned for daily retention: one shared daily challenge plus endless practice.
         </p>
       </div>
 
-      <section className="w-full max-w-3xl">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-center">How to Play</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm text-muted-foreground">
-            <p>
-              Read the definition, then guess the word by choosing letters on the keyboard. You have 6 incorrect tries.
-            </p>
-            <ol className="list-decimal pl-5 space-y-2">
-              <li>Correct letters reveal their positions in the word.</li>
-              <li>Incorrect letters count against your remaining tries.</li>
-              <li>Use hints to reveal letters if you get stuck.</li>
-              <li>Win to advance levels and earn points (easy: 10, medium: 20, hard: 30).</li>
-            </ol>
-          </CardContent>
-        </Card>
+      <section className="w-full max-w-3xl space-y-3">
+        <div className="grid grid-cols-2 gap-2 rounded-lg border bg-muted/30 p-1">
+          <Button
+            variant={gameMode === "daily" ? "default" : "ghost"}
+            className="w-full"
+            onClick={() => loadDailyChallenge()}
+          >
+            <CalendarDays className="mr-2 h-4 w-4" /> Daily Challenge
+          </Button>
+          <Button
+            variant={gameMode === "practice" ? "default" : "ghost"}
+            className="w-full"
+            onClick={() => {
+              setGameMode("practice");
+              startPracticeGame(level, wordData?.word);
+            }}
+          >
+            <Target className="mr-2 h-4 w-4" /> Practice Mode
+          </Button>
+        </div>
+        <p className="text-center text-sm text-muted-foreground">
+          Daily uses one global word each UTC day. Practice stays unlimited.
+        </p>
       </section>
 
-      {/* Theme Selector */}
-      {user && (
+      {user && gameMode === "practice" && (
         <div className="w-full max-w-md">
           <ThemeSelector
             selectedTheme={selectedTheme}
@@ -564,14 +924,12 @@ export default function Home() {
               setSelectedTheme(theme);
               if (user?.uid) {
                 await updateUserTheme({ userId: user.uid, theme });
-                // Restart game with new theme
-                await startNewGame(level);
               }
+              await startPracticeGame(level, wordData?.word, theme);
             }}
             isPremium={isPremium}
             onUpgradeClick={() => {
-              // Navigate to subscription page with Paystack payment
-              window.location.href = '/subscribe';
+              window.location.href = "/subscribe";
             }}
           />
         </div>
@@ -580,11 +938,10 @@ export default function Home() {
       {gameContent()}
 
       <BackgroundMusicControls />
-      
-      {/* Google AdSense Rewarded Ad Modal */}
+
       {showAdsenseAd && (
         <AlertDialog open={showAdsenseAd} onOpenChange={setShowAdsenseAd}>
-          <AlertDialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <AlertDialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
             <AlertDialogHeader>
               <AlertDialogTitle>Watch an Ad for a Free Hint</AlertDialogTitle>
               <AlertDialogDescription>

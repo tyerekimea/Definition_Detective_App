@@ -81,6 +81,12 @@ export default function RootLayout({
           crossOrigin="anonymous"
           strategy="beforeInteractive"
         />
+        {/* Adsterra Popunder Script */}
+        <Script
+          id="adsterra-popunder"
+          src="https://pl28781140.effectivegatecpm.com/63/2d/b5/632db569977b88a95ddd0a4ebdb09f79.js"
+          strategy="afterInteractive"
+        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}

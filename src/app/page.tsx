@@ -15,7 +15,6 @@ import {
   XCircle,
   Award,
   PartyPopper,
-  Clapperboard,
   Share,
   ArrowRight,
   Loader2,
@@ -34,15 +33,7 @@ import { doc, updateDoc, increment, getDoc, serverTimestamp } from "firebase/fir
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
 import type { UserProfile } from "@/lib/firebase-types";
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import ShareButton from "@/components/game/share-button";
-import GoogleAdsenseRewardedAd from "@/components/ads/GoogleAdsenseRewardedAd";
 import BackgroundMusicControls from "@/components/audio/BackgroundMusicControls";
 
 type GameState = "playing" | "won" | "lost";
@@ -183,7 +174,6 @@ export default function Home() {
   const [isHintLoading, startHintTransition] = useTransition();
   const [visualHint, setVisualHint] = useState<string | null>(null);
   const [isVisualHintLoading, setIsVisualHintLoading] = useState(false);
-  const [showAdsenseAd, setShowAdsenseAd] = useState(false);
   const [selectedTheme, setSelectedTheme] = useState<WordTheme>("current");
   const [isPremium, setIsPremium] = useState(false);
   const [dailyDateKey, setDailyDateKey] = useState(getDailyDateKey());
@@ -457,7 +447,7 @@ export default function Home() {
       toast({
         variant: "destructive",
         title: "Login Required",
-        description: "You must be logged in to use hints or watch ads.",
+        description: "You must be logged in to use hints.",
       });
       return;
     }
@@ -498,37 +488,6 @@ export default function Home() {
         });
       }
     });
-  };
-
-  const handleRewardedAd = () => {
-    if (!user) {
-      toast({
-        variant: "destructive",
-        title: "Login Required",
-        description: "You must log in to watch an ad for a hint.",
-      });
-      return;
-    }
-    setShowAdsenseAd(true);
-  };
-
-  const handleAdComplete = () => {
-    setShowAdsenseAd(false);
-    getHint(true);
-  };
-
-  const handleAdSkipped = () => {
-    setShowAdsenseAd(false);
-    toast({
-      variant: "destructive",
-      title: "Ad Skipped",
-      description: "Please watch the entire ad to earn your free hint.",
-    });
-  };
-
-  const handleAdError = (error: Error) => {
-    setShowAdsenseAd(false);
-    console.error("Ad error:", error);
   };
 
   const getVisualHint = async () => {
@@ -836,14 +795,6 @@ export default function Home() {
                 <Lightbulb className={cn("mr-2 h-4 w-4", isHintLoading && "animate-spin")} />
                 {isHintLoading ? "Getting Hint..." : "Use a Hint"}
               </Button>
-              <Button
-                onClick={handleRewardedAd}
-                disabled={isHintLoading || allLettersGuessed || showAdsenseAd}
-                variant="outline"
-              >
-                <Clapperboard className={cn("mr-2 h-4 w-4", showAdsenseAd && "animate-spin")} />
-                {showAdsenseAd ? "Loading Ad..." : "Watch Ad for Hint"}
-              </Button>
               <Button onClick={getVisualHint} disabled={isVisualHintLoading || !!visualHint} variant="secondary">
                 <Share className={cn("mr-2 h-4 w-4", isVisualHintLoading && "animate-spin")} />
                 {isVisualHintLoading ? "Generating..." : "Visual Clue"}
@@ -938,26 +889,6 @@ export default function Home() {
       {gameContent()}
 
       <BackgroundMusicControls />
-
-      {showAdsenseAd && (
-        <AlertDialog open={showAdsenseAd} onOpenChange={setShowAdsenseAd}>
-          <AlertDialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
-            <AlertDialogHeader>
-              <AlertDialogTitle>Watch an Ad for a Free Hint</AlertDialogTitle>
-              <AlertDialogDescription>
-                Thanks for supporting us! Watch this ad to earn a free hint.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <div className="py-4">
-              <GoogleAdsenseRewardedAd
-                onAdComplete={handleAdComplete}
-                onAdSkipped={handleAdSkipped}
-                onAdError={handleAdError}
-              />
-            </div>
-          </AlertDialogContent>
-        </AlertDialog>
-      )}
     </div>
   );
 }

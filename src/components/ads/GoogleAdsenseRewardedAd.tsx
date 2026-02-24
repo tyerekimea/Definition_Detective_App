@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import Script from 'next/script';
+import { useEffect, useRef, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 interface GoogleAdsenseRewardedAdProps {
@@ -11,106 +10,128 @@ interface GoogleAdsenseRewardedAdProps {
 }
 
 /**
- * Google AdSense Rewarded Ad Component
- * 
- * This component displays a rewarded ad from Google AdSense.
- * The user watches the ad completely to earn a reward (e.g., free hint).
- * 
- * Usage:
- * <GoogleAdsenseRewardedAd onAdComplete={() => console.log('Ad watched!')} />
- * 
- * Your Google AdSense configuration:
- * Client ID: ca-pub-2955575113938000
+ * Rewarded ad component using Adsterra smartlink.
+ *
+ * Flow:
+ * 1) User clicks the button to open the ad in a new tab.
+ * 2) A short countdown runs in-app.
+ * 3) Reward callback is triggered for a free hint.
  */
+const ADSTERRA_SMARTLINK_URL =
+  'https://www.effectivegatecpm.com/t2j8zvfv?key=0baa3f00e4455ea59b1f7c352917a1e1';
+const REWARD_COUNTDOWN_SECONDS = 10;
+
 export default function GoogleAdsenseRewardedAd({
   onAdComplete,
   onAdSkipped,
   onAdError
 }: GoogleAdsenseRewardedAdProps) {
-  const [adReady, setAdReady] = useState(false);
   const [isDisplaying, setIsDisplaying] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState(REWARD_COUNTDOWN_SECONDS);
   const { toast } = useToast();
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    // Check if Google AdSense is loaded
-    if (window && (window as any).adsbygoogle) {
-      setAdReady(true);
-      console.log('Google AdSense loaded');
-    }
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
   }, []);
 
-  const displayAd = async () => {
-    try {
-      // Initialize AdSense
-      if (window && (window as any).adsbygoogle) {
-        ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({
-          google_ad_client: 'ca-pub-2955575113938000',
-          enable_page_level_ads: true
-        });
+  const startRewardCountdown = () => {
+    setIsDisplaying(true);
+    setSecondsLeft(REWARD_COUNTDOWN_SECONDS);
 
-        setIsDisplaying(true);
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
 
-        // Simulate ad watch duration (AdSense will handle the actual ad display)
-        // This gives user feedback that an ad is playing
-        const adTimeout = setTimeout(() => {
+    intervalRef.current = setInterval(() => {
+      setSecondsLeft((prev) => {
+        if (prev <= 1) {
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+          }
           setIsDisplaying(false);
           onAdComplete();
           toast({
             title: 'Thank you!',
-            description: 'Ad watched successfully. You earned a free hint!',
+            description: 'Ad completed. You earned a free hint!',
           });
-        }, 3000); // 3 seconds minimum ad view
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
 
-        return () => clearTimeout(adTimeout);
+  const displayAd = () => {
+    try {
+      const adWindow = window.open(ADSTERRA_SMARTLINK_URL, '_blank', 'noopener,noreferrer');
+      if (!adWindow) {
+        throw new Error('Popup blocked. Enable popups and try again.');
       }
+      startRewardCountdown();
     } catch (error) {
-      const err = error instanceof Error ? error : new Error('Failed to display ad');
+      const err = error instanceof Error ? error : new Error('Failed to open ad link');
       setIsDisplaying(false);
       onAdError?.(err);
       toast({
         variant: 'destructive',
         title: 'Ad Error',
-        description: 'Failed to load ad. Please try again.',
+        description: err.message || 'Failed to open ad link. Please try again.',
       });
     }
   };
 
+  const skipAd = () => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    setIsDisplaying(false);
+    onAdSkipped?.();
+  };
+
   return (
     <>
-      {/* AdSense ads will be injected here by the global script */}
       <div
-        id="adsense-rewarded-container"
-        className="w-full min-h-[600px] flex items-center justify-center bg-muted rounded-lg mb-4"
+        id="adsterra-rewarded-container"
+        className="w-full min-h-[260px] flex items-center justify-center bg-muted rounded-lg mb-4 p-6"
       >
         {isDisplaying ? (
-          <div className="text-center">
-            <p className="text-lg font-semibold mb-2">Ad is playing...</p>
-            <p className="text-sm text-muted-foreground">This helps keep the game free!</p>
+          <div className="text-center space-y-3">
+            <p className="text-lg font-semibold">Complete Ad Timer</p>
+            <p className="text-sm text-muted-foreground">
+              Keep the sponsor tab open briefly, then your hint unlocks automatically.
+            </p>
+            <p className="text-3xl font-bold">{secondsLeft}s</p>
+            <button
+              type="button"
+              onClick={skipAd}
+              className="text-sm underline text-muted-foreground hover:text-foreground"
+            >
+              Cancel
+            </button>
           </div>
         ) : (
-          <p className="text-muted-foreground">Ad space</p>
+          <div className="text-center space-y-3">
+            <p className="text-lg font-semibold">Watch Ad for Free Hint</p>
+            <p className="text-sm text-muted-foreground">
+              Tap below to open our sponsor link and unlock one free hint.
+            </p>
+            <button
+              type="button"
+              onClick={displayAd}
+              className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+            >
+              Open Ad Link
+            </button>
+          </div>
         )}
       </div>
-
-      {/* This will trigger the ad display through AdSense */}
-      <Script
-        id="adsense-rewarded-trigger"
-        strategy="afterInteractive"
-        dangerouslySetInnerHTML={{
-          __html: `
-            if (window && window.adsbygoogle) {
-              try {
-                (window.adsbygoogle = window.adsbygoogle || []).push({
-                  google_ad_client: 'ca-pub-2955575113938000',
-                  enable_page_level_ads: true
-                });
-              } catch (e) {
-                console.error('AdSense error:', e);
-              }
-            }
-          `
-        }}
-      />
     </>
   );
 }

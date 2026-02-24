@@ -3,6 +3,7 @@ import './globals.css';
 import Providers from '@/components/providers';
 import Header from '@/components/header';
 import Script from 'next/script';
+import AdsterraBannerAd from '@/components/ads/AdsterraBannerAd';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://traylapps.com'),
@@ -81,12 +82,6 @@ export default function RootLayout({
           crossOrigin="anonymous"
           strategy="beforeInteractive"
         />
-        {/* Adsterra Popunder Script */}
-        <Script
-          id="adsterra-popunder"
-          src="https://pl28781140.effectivegatecpm.com/63/2d/b5/632db569977b88a95ddd0a4ebdb09f79.js"
-          strategy="afterInteractive"
-        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
@@ -97,6 +92,7 @@ export default function RootLayout({
           <div className="relative flex min-h-screen w-full flex-col">
             <Header />
             <main className="flex-1">{children}</main>
+            <AdsterraBannerAd />
           </div>
         </Providers>
       </body>

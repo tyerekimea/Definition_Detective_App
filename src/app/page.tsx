@@ -614,9 +614,61 @@ export default function Home() {
     const practiceShareText = "I'm playing Definition Detective! Can you beat my high score?";
     const shareText = gameMode === "daily" && gameState !== "playing" ? dailyShareText : practiceShareText;
 
+    const hasRoundEnded = gameState === "won" || gameState === "lost";
+
+    const definitionAndWord = (
+      <div className="space-y-4">
+        <Card aria-labelledby="definition-title">
+          <CardHeader>
+            <CardTitle id="definition-title" className="flex items-center justify-center gap-2 text-xl md:text-2xl lg:justify-start">
+              {gameMode === "daily" && <CalendarDays className="h-6 w-6 text-primary" />}
+              {gameMode === "daily" ? `Daily Definition (${dailyDateKey})` : "Definition"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p
+              className="rounded-md bg-muted/50 p-4 text-center font-sans text-xl text-muted-foreground md:text-2xl lg:text-left"
+              aria-live="polite"
+              aria-label="Word definition clue"
+            >
+              {wordData.definition}
+            </p>
+          </CardContent>
+        </Card>
+
+        {visualHint && (
+          <Card className="border-dashed bg-muted/30">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-medium text-muted-foreground">Visual Clue</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-base italic md:text-lg">{visualHint}</p>
+            </CardContent>
+          </Card>
+        )}
+
+        <div
+          className={cn(
+            "flex flex-wrap items-center justify-center gap-2 md:gap-3 lg:justify-start",
+            lastGuessOutcome === "incorrect" && "animate-shake",
+            lastGuessOutcome === "correct" && "animate-slot-pop"
+          )}
+        >
+          {displayedWord.map(({ char, revealed }, index) => (
+            <div
+              key={index}
+              className="flex h-12 w-12 items-center justify-center rounded-md border-b-4 border-primary bg-muted/30 font-mono text-3xl font-bold uppercase md:h-14 md:w-14 md:text-4xl"
+            >
+              {revealed && <span className="animate-tile-reveal">{char}</span>}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+
     return (
-      <div className="w-full max-w-4xl mx-auto space-y-8">
-        <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3 sm:text-base">
+      <div className="mx-auto w-full max-w-6xl space-y-4 md:space-y-5">
+        <div className="grid grid-cols-1 gap-3 text-base sm:grid-cols-3 md:text-lg">
           <div className="flex items-center justify-center gap-2 rounded-lg border bg-card p-3">
             <Award className="h-5 w-5 text-primary" />
             Score: <span className="font-semibold">{(user ? score : 0).toLocaleString()}</span>
@@ -635,7 +687,7 @@ export default function Home() {
 
         {showOnboarding && gameState === "playing" && (
           <Card className="border-primary/40 bg-primary/5">
-            <CardContent className="flex flex-col gap-3 py-4 text-sm">
+            <CardContent className="flex flex-col gap-3 py-4 text-base">
               <p className="flex items-center gap-2 font-semibold text-primary">
                 <Sparkles className="h-4 w-4" />
                 Quick Start
@@ -659,168 +711,134 @@ export default function Home() {
           </Card>
         )}
 
-        <Card aria-labelledby="definition-title">
-          <CardHeader>
-            <CardTitle id="definition-title" className="text-center flex items-center justify-center gap-2">
-              {gameMode === "daily" && <CalendarDays className="h-5 w-5 text-primary" />}
-              {gameMode === "daily" ? `Daily Definition (${dailyDateKey})` : "Definition"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p
-              className="rounded-md bg-muted/50 p-4 text-center font-sans text-lg text-muted-foreground"
-              aria-live="polite"
-              aria-label="Word definition clue"
-            >
-              {wordData.definition}
-            </p>
-          </CardContent>
-        </Card>
+        {hasRoundEnded ? (
+          <>
+            {definitionAndWord}
+            <Alert variant={gameState === "won" ? "default" : "destructive"} className="text-center">
+              {gameState === "won" ? <PartyPopper className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+              <AlertTitle className="text-2xl font-bold">
+                {gameMode === "daily"
+                  ? gameState === "won"
+                    ? "Daily challenge solved"
+                    : "Daily challenge complete"
+                  : gameState === "won"
+                  ? "You solved it"
+                  : "Case closed... incorrectly"}
+              </AlertTitle>
+              <AlertDescription>
+                {gameMode === "daily"
+                  ? `The daily word for ${dailyDateKey} was "${wordData.word}". ${
+                      gameState === "won" ? "Come back tomorrow to keep your streak alive." : "A new puzzle unlocks tomorrow."
+                    }`
+                  : gameState === "won"
+                  ? `The word was "${wordData.word}". Ready for the next case?`
+                  : `The word was "${wordData.word}". Better luck next time.`}
+              </AlertDescription>
 
-        {visualHint && (
-          <Card className="bg-muted/30 border-dashed">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Visual Clue</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="italic">{visualHint}</p>
-            </CardContent>
-          </Card>
-        )}
-
-        <div
-          className={cn(
-            "my-8 flex flex-wrap items-center justify-center gap-2 md:gap-4",
-            lastGuessOutcome === "incorrect" && "animate-shake",
-            lastGuessOutcome === "correct" && "animate-slot-pop"
-          )}
-        >
-          {displayedWord.map(({ char, revealed }, index) => (
-            <div
-              key={index}
-              className="flex h-12 w-12 items-center justify-center rounded-md border-b-4 border-primary bg-muted/30 font-mono text-3xl font-bold uppercase md:h-16 md:w-16 md:text-4xl"
-            >
-              {revealed && <span className="animate-tile-reveal">{char}</span>}
-            </div>
-          ))}
-        </div>
-
-        {gameState === "won" || gameState === "lost" ? (
-          <Alert variant={gameState === "won" ? "default" : "destructive"} className="text-center">
-            {gameState === "won" ? <PartyPopper className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
-            <AlertTitle className="text-2xl font-bold">
-              {gameMode === "daily"
-                ? gameState === "won"
-                  ? "Daily challenge solved"
-                  : "Daily challenge complete"
-                : gameState === "won"
-                ? "You solved it"
-                : "Case closed... incorrectly"}
-            </AlertTitle>
-            <AlertDescription>
-              {gameMode === "daily"
-                ? `The daily word for ${dailyDateKey} was "${wordData.word}". ${
-                    gameState === "won" ? "Come back tomorrow to keep your streak alive." : "A new puzzle unlocks tomorrow."
-                  }`
-                : gameState === "won"
-                ? `The word was "${wordData.word}". Ready for the next case?`
-                : `The word was "${wordData.word}". Better luck next time.`}
-            </AlertDescription>
-
-            <div className="mt-4 flex flex-wrap justify-center gap-3">
-              {gameMode === "daily" ? (
-                <>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setGameMode("practice");
-                      startPracticeGame(level, wordData.word);
-                    }}
-                  >
-                    <ArrowRight className="mr-2 h-4 w-4" />
-                    Switch to Practice
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    onClick={() => loadDailyChallenge(getDailyDateKey())}
-                    disabled={dailyDateKey === getDailyDateKey()}
-                  >
-                    <RotateCw className="mr-2 h-4 w-4" />
-                    Check New Daily
-                  </Button>
-                </>
-              ) : (
-                <>
-                  {gameState === "won" && (
+              <div className="mt-4 flex flex-wrap justify-center gap-3">
+                {gameMode === "daily" ? (
+                  <>
                     <Button
+                      variant="outline"
                       onClick={() => {
-                        const newLevel = level + 1;
-                        setLevel(newLevel);
-                        setGameState("playing");
-                        startPracticeGame(newLevel, wordData.word);
-                      }}
-                      disabled={isGameLoading}
-                    >
-                      {isGameLoading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Loading...
-                        </>
-                      ) : (
-                        <>
-                          <ArrowRight className="mr-2 h-4 w-4" />
-                          Next Case
-                        </>
-                      )}
-                    </Button>
-                  )}
-                  {gameState === "lost" && (
-                    <Button
-                      onClick={() => {
-                        setGameState("playing");
+                        setGameMode("practice");
                         startPracticeGame(level, wordData.word);
                       }}
                     >
-                      <RotateCw className="mr-2 h-4 w-4" /> Retry Level
+                      <ArrowRight className="mr-2 h-4 w-4" />
+                      Switch to Practice
                     </Button>
-                  )}
-                </>
-              )}
-            </div>
-          </Alert>
-        ) : (
-          <>
-            <div className="flex flex-wrap justify-center gap-4">
-              <Button onClick={() => getHint(false)} disabled={hintDisabled}>
-                <Lightbulb className={cn("mr-2 h-4 w-4", isHintLoading && "animate-spin")} />
-                {isHintLoading ? "Getting Hint..." : "Use a Hint"}
-              </Button>
-              <Button onClick={getVisualHint} disabled={isVisualHintLoading || !!visualHint} variant="secondary">
-                <Share className={cn("mr-2 h-4 w-4", isVisualHintLoading && "animate-spin")} />
-                {isVisualHintLoading ? "Generating..." : "Visual Clue"}
-              </Button>
-            </div>
-
-            {!user && <p className="text-center text-sm text-muted-foreground">Please log in to use hints and save progress.</p>}
-
-            <p className="text-center text-muted-foreground">
-              Incorrect Guesses: {guessedLetters.incorrect.join(", ").toUpperCase() || "None"} ({incorrectTriesLeft} left)
-            </p>
-
-            <div className="mx-auto w-full max-w-[560px]">
-              <Keyboard
-                onKeyClick={handleGuess}
-                guessedLetters={guessedLetters}
-                revealedByHint={revealedByHint}
-                lastInteractedLetter={lastInteractedLetter}
-                lastGuessOutcome={lastGuessOutcome}
-              />
-            </div>
+                    <Button
+                      variant="secondary"
+                      onClick={() => loadDailyChallenge(getDailyDateKey())}
+                      disabled={dailyDateKey === getDailyDateKey()}
+                    >
+                      <RotateCw className="mr-2 h-4 w-4" />
+                      Check New Daily
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    {gameState === "won" && (
+                      <Button
+                        onClick={() => {
+                          const newLevel = level + 1;
+                          setLevel(newLevel);
+                          setGameState("playing");
+                          startPracticeGame(newLevel, wordData.word);
+                        }}
+                        disabled={isGameLoading}
+                      >
+                        {isGameLoading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Loading...
+                          </>
+                        ) : (
+                          <>
+                            <ArrowRight className="mr-2 h-4 w-4" />
+                            Next Case
+                          </>
+                        )}
+                      </Button>
+                    )}
+                    {gameState === "lost" && (
+                      <Button
+                        onClick={() => {
+                          setGameState("playing");
+                          startPracticeGame(level, wordData.word);
+                        }}
+                      >
+                        <RotateCw className="mr-2 h-4 w-4" /> Retry Level
+                      </Button>
+                    )}
+                  </>
+                )}
+              </div>
+            </Alert>
           </>
+        ) : (
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(380px,430px)] lg:items-start">
+            <div className="space-y-4">
+              {definitionAndWord}
+
+              <div className="flex flex-wrap justify-center gap-4 lg:justify-start">
+                <Button onClick={() => getHint(false)} disabled={hintDisabled}>
+                  <Lightbulb className={cn("mr-2 h-4 w-4", isHintLoading && "animate-spin")} />
+                  {isHintLoading ? "Getting Hint..." : "Use a Hint"}
+                </Button>
+                <Button onClick={getVisualHint} disabled={isVisualHintLoading || !!visualHint} variant="secondary">
+                  <Share className={cn("mr-2 h-4 w-4", isVisualHintLoading && "animate-spin")} />
+                  {isVisualHintLoading ? "Generating..." : "Visual Clue"}
+                </Button>
+              </div>
+
+              {!user && <p className="text-center text-base text-muted-foreground lg:text-left">Please log in to use hints and save progress.</p>}
+
+              <p className="text-center text-base text-muted-foreground lg:text-left">
+                Incorrect Guesses: {guessedLetters.incorrect.join(", ").toUpperCase() || "None"} ({incorrectTriesLeft} left)
+              </p>
+            </div>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-center text-xl">Keyboard</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <Keyboard
+                  onKeyClick={handleGuess}
+                  guessedLetters={guessedLetters}
+                  revealedByHint={revealedByHint}
+                  lastInteractedLetter={lastInteractedLetter}
+                  lastGuessOutcome={lastGuessOutcome}
+                />
+              </CardContent>
+            </Card>
+          </div>
         )}
 
-        <div className="mt-12 border-t border-dashed pt-8">
-          <p className="mb-4 flex items-center justify-center gap-2 text-sm font-medium text-muted-foreground">
+        <div className="mt-4 border-t border-dashed pt-4">
+          <p className="mb-3 flex items-center justify-center gap-2 text-sm font-medium text-muted-foreground">
             <Share className="h-4 w-4" /> Share The Game
           </p>
           <div className="flex justify-center gap-2">
@@ -834,61 +852,65 @@ export default function Home() {
   };
 
   return (
-    <div className="container mx-auto flex flex-col items-center justify-center gap-8 py-8 md:py-12">
-      <div className="text-center">
-        <h1 className="font-headline text-4xl font-bold tracking-tight text-primary sm:text-5xl lg:text-6xl">Definition Detective</h1>
-        <p className="mt-4 max-w-2xl text-lg text-foreground/80">
-          A text-first word puzzle tuned for daily retention: one shared daily challenge plus endless practice.
-        </p>
+    <div className="container mx-auto h-[calc(100dvh-9rem)] overflow-hidden py-2 md:h-[calc(100dvh-8.75rem)] md:py-3">
+      <div className="mx-auto flex h-full w-full max-w-6xl flex-col items-center gap-3">
+        <div className="text-center">
+          <h1 className="font-headline text-4xl font-bold tracking-tight text-primary sm:text-5xl lg:text-6xl">Definition Detective</h1>
+          <p className="mt-2 max-w-3xl text-lg text-foreground/80">
+            A text-first word puzzle tuned for daily retention: one shared daily challenge plus endless practice.
+          </p>
+        </div>
+
+        <section className="w-full max-w-3xl space-y-2">
+          <div className="grid grid-cols-2 gap-2 rounded-lg border bg-muted/30 p-1">
+            <Button
+              variant={gameMode === "daily" ? "default" : "ghost"}
+              className="w-full"
+              onClick={() => loadDailyChallenge()}
+            >
+              <CalendarDays className="mr-2 h-4 w-4" /> Daily Challenge
+            </Button>
+            <Button
+              variant={gameMode === "practice" ? "default" : "ghost"}
+              className="w-full"
+              onClick={() => {
+                setGameMode("practice");
+                startPracticeGame(level, wordData?.word);
+              }}
+            >
+              <Target className="mr-2 h-4 w-4" /> Practice Mode
+            </Button>
+          </div>
+          <p className="text-center text-sm text-muted-foreground">
+            Daily uses one global word each UTC day. Practice stays unlimited.
+          </p>
+        </section>
+
+        {user && gameMode === "practice" && (
+          <div className="w-full max-w-md">
+            <ThemeSelector
+              selectedTheme={selectedTheme}
+              onThemeChange={async (theme) => {
+                setSelectedTheme(theme);
+                if (user?.uid) {
+                  await updateUserTheme({ userId: user.uid, theme });
+                }
+                await startPracticeGame(level, wordData?.word, theme);
+              }}
+              isPremium={isPremium}
+              onUpgradeClick={() => {
+                window.location.href = "/subscribe";
+              }}
+            />
+          </div>
+        )}
+
+        <div className="w-full min-h-0 flex-1 overflow-hidden px-1 pb-2">
+          {gameContent()}
+        </div>
+
+        <BackgroundMusicControls />
       </div>
-
-      <section className="w-full max-w-3xl space-y-3">
-        <div className="grid grid-cols-2 gap-2 rounded-lg border bg-muted/30 p-1">
-          <Button
-            variant={gameMode === "daily" ? "default" : "ghost"}
-            className="w-full"
-            onClick={() => loadDailyChallenge()}
-          >
-            <CalendarDays className="mr-2 h-4 w-4" /> Daily Challenge
-          </Button>
-          <Button
-            variant={gameMode === "practice" ? "default" : "ghost"}
-            className="w-full"
-            onClick={() => {
-              setGameMode("practice");
-              startPracticeGame(level, wordData?.word);
-            }}
-          >
-            <Target className="mr-2 h-4 w-4" /> Practice Mode
-          </Button>
-        </div>
-        <p className="text-center text-sm text-muted-foreground">
-          Daily uses one global word each UTC day. Practice stays unlimited.
-        </p>
-      </section>
-
-      {user && gameMode === "practice" && (
-        <div className="w-full max-w-md">
-          <ThemeSelector
-            selectedTheme={selectedTheme}
-            onThemeChange={async (theme) => {
-              setSelectedTheme(theme);
-              if (user?.uid) {
-                await updateUserTheme({ userId: user.uid, theme });
-              }
-              await startPracticeGame(level, wordData?.word, theme);
-            }}
-            isPremium={isPremium}
-            onUpgradeClick={() => {
-              window.location.href = "/subscribe";
-            }}
-          />
-        </div>
-      )}
-
-      {gameContent()}
-
-      <BackgroundMusicControls />
     </div>
   );
 }

@@ -28,7 +28,7 @@ export function Keyboard({
   return (
     <div className="flex w-full flex-col items-center gap-2 md:gap-3">
       {keys.map((row, rowIndex) => (
-        <div key={rowIndex} className="flex w-full justify-center gap-1 md:gap-2">
+        <div key={rowIndex} className="flex w-full justify-center gap-1.5 md:gap-2">
           {row.map((key) => {
             const lowerKey = key.toLowerCase();
             const isCorrect = guessedLetters.correct.includes(lowerKey);
@@ -55,7 +55,7 @@ export function Keyboard({
                 variant="outline"
                 aria-label={`Letter ${key}, ${statusLabel}`}
                 className={cn(
-                  "relative h-10 w-8 p-0 text-base font-bold uppercase sm:w-9 md:h-12 md:w-12 md:text-lg",
+                  "relative h-11 w-9 p-0 text-lg font-bold uppercase sm:h-12 sm:w-10 sm:text-xl lg:h-14 lg:w-11 lg:text-2xl",
                   "transition-transform duration-200 ease-out",
                   isCorrect &&
                     "border-[hsl(var(--correct))] bg-[hsl(var(--correct))/0.2] text-foreground hover:bg-[hsl(var(--correct))/0.25]",
@@ -69,7 +69,7 @@ export function Keyboard({
               >
                 <span>{key}</span>
                 {statusGlyph && (
-                  <span className="absolute -bottom-1 text-[9px] font-semibold leading-none tracking-wide text-foreground/70 md:text-[10px]">
+                  <span className="absolute -bottom-1 text-[10px] font-semibold leading-none tracking-wide text-foreground/70 md:text-[11px]">
                     {statusGlyph}
                   </span>
                 )}

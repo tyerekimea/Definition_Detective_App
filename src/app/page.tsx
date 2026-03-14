@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useTransition, useRef } from "react";
+import Link from "next/link";
 import { type WordData, type WordTheme, getRankForScore, wordList } from "@/lib/game-data";
 import { generateImageDescription } from "@/ai/flows/generate-image-description-flow";
 import { useHintAction, generateWordWithTheme, updateUserTheme, getUserTheme } from "@/lib/actions";
@@ -14,14 +15,19 @@ import {
   RotateCw,
   XCircle,
   Award,
+  Crown,
   PartyPopper,
   Share,
+  Trophy,
   ArrowRight,
   Loader2,
   CalendarDays,
   Flame,
   Sparkles,
   Target,
+  Menu,
+  X,
+  Music,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useGameSounds } from "@/hooks/use-game-sounds";
@@ -181,6 +187,8 @@ export default function Home() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [lastInteractedLetter, setLastInteractedLetter] = useState<string | null>(null);
   const [lastGuessOutcome, setLastGuessOutcome] = useState<GuessOutcome>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [activeMenuTab, setActiveMenuTab] = useState<'audio' | 'how-to-play' | 'feedback' | 'share' | null>(null);
 
   const guessAnimationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const selectedThemeRef = useRef<WordTheme>("current");
@@ -194,6 +202,7 @@ export default function Home() {
     userProfile?.subscriptionStatus === "active" ||
     userProfile?.subscriptionStatus === "expiring" ||
     isPremium;
+  const hasAdFreeExperience = hasUnlimitedHints;
 
   const { toast } = useToast();
 
@@ -594,6 +603,12 @@ export default function Home() {
     updateDailyStreak,
   ]);
 
+  const dailyShareText = `Definition Detective Daily ${dailyDateKey}\n${
+    gameState === "won" ? "Solved" : "Not solved"
+  } | Wrong: ${guessedLetters.incorrect.length}/${MAX_INCORRECT_TRIES}\nStreak: ${dailyStreak}`;
+  const practiceShareText = "I'm playing Definition Detective! Can you beat my high score?";
+  const shareText = gameMode === "daily" && gameState !== "playing" ? dailyShareText : practiceShareText;
+
   const gameContent = () => {
     if (isGameLoading || !wordData) {
       return (
@@ -607,52 +622,19 @@ export default function Home() {
     const allLettersGuessed = displayedWord.every((item) => item.revealed);
     const hintDisabled = isHintLoading || allLettersGuessed || !user || profileLoading;
 
-    const dailyShareText = `Definition Detective Daily ${dailyDateKey}\n${
-      gameState === "won" ? "Solved" : "Not solved"
-    } | Wrong: ${guessedLetters.incorrect.length}/${MAX_INCORRECT_TRIES}\nStreak: ${dailyStreak}`;
-
-    const practiceShareText = "I'm playing Definition Detective! Can you beat my high score?";
-    const shareText = gameMode === "daily" && gameState !== "playing" ? dailyShareText : practiceShareText;
-
     return (
-      <div className="w-full max-w-4xl mx-auto space-y-8">
+      <div className="w-full max-w-4xl mx-auto -mt-3 space-y-0">
 
-        {showOnboarding && gameState === "playing" && (
-          <Card className="border-primary/40 bg-primary/5">
-            <CardContent className="flex flex-col gap-3 py-4 text-sm">
-              <p className="flex items-center gap-2 font-semibold text-primary">
-                <Sparkles className="h-4 w-4" />
-                Quick Start
-              </p>
-              <p className="text-muted-foreground">Read the definition card, then tap one letter to begin. You only get six misses.</p>
-              <div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setShowOnboarding(false);
-                    if (typeof window !== "undefined") {
-                      window.localStorage.setItem(ONBOARDING_STORAGE_KEY, "1");
-                    }
-                  }}
-                >
-                  Start Playing
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        <Card aria-labelledby="definition-title">
-          <CardHeader>
+        <Card aria-labelledby="definition-title" className="max-w-[627px] mx-auto">
+          <CardHeader className="p-3 pb-1">
             <CardTitle id="definition-title" className="text-center flex items-center justify-center gap-2">
               {gameMode === "daily" && <CalendarDays className="h-5 w-5 text-primary" />}
               {gameMode === "daily" ? `Daily Definition (${dailyDateKey})` : "Definition"}
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 pt-0">
             <p
-              className="rounded-md bg-muted/50 p-4 text-center font-sans text-lg text-muted-foreground"
+              className="rounded-md bg-muted/50 p-2 text-left font-serif text-xl text-muted-foreground"
               aria-live="polite"
               aria-label="Word definition clue"
             >
@@ -661,20 +643,9 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        {visualHint && (
-          <Card className="bg-muted/30 border-dashed">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Visual Clue</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="italic">{visualHint}</p>
-            </CardContent>
-          </Card>
-        )}
-
         <div
           className={cn(
-            "my-8 flex flex-wrap items-center justify-center gap-2 md:gap-4",
+            "mt-0 mb-4 flex flex-wrap items-center justify-center gap-2 md:gap-4",
             lastGuessOutcome === "incorrect" && "animate-shake",
             lastGuessOutcome === "correct" && "animate-slot-pop"
           )}
@@ -682,7 +653,7 @@ export default function Home() {
           {displayedWord.map(({ char, revealed }, index) => (
             <div
               key={index}
-              className="flex h-12 w-12 items-center justify-center rounded-md border-b-4 border-primary bg-muted/30 font-mono text-3xl font-bold uppercase md:h-16 md:w-16 md:text-4xl"
+              className="flex h-12 w-12 items-center justify-center rounded-md border-b-4 border-primary bg-muted/30 font-mono text-4xl font-bold uppercase md:h-16 md:w-16 md:text-5xl"
             >
               {revealed && <span className="animate-tile-reveal">{char}</span>}
             </div>
@@ -774,14 +745,10 @@ export default function Home() {
           </Alert>
         ) : (
           <>
-            <div className="flex flex-wrap justify-center gap-4">
+            <div className="mt-0 flex flex-wrap justify-center gap-2">
               <Button onClick={() => getHint(false)} disabled={hintDisabled}>
                 <Lightbulb className={cn("mr-2 h-4 w-4", isHintLoading && "animate-spin")} />
                 {isHintLoading ? "Getting Hint..." : "Use a Hint"}
-              </Button>
-              <Button onClick={getVisualHint} disabled={isVisualHintLoading || !!visualHint} variant="secondary">
-                <Share className={cn("mr-2 h-4 w-4", isVisualHintLoading && "animate-spin")} />
-                {isVisualHintLoading ? "Generating..." : "Visual Clue"}
               </Button>
             </div>
 
@@ -803,92 +770,259 @@ export default function Home() {
           </>
         )}
 
-        <div className="mt-12 border-t border-dashed pt-8">
-          <p className="mb-4 flex items-center justify-center gap-2 text-sm font-medium text-muted-foreground">
-            <Share className="h-4 w-4" /> Share The Game
-          </p>
-          <div className="flex justify-center gap-2">
-            <ShareButton platform="whatsapp" text={shareText} />
-            <ShareButton platform="facebook" text={shareText} />
-            <ShareButton platform="x" text={shareText} />
-          </div>
-        </div>
       </div>
     );
   };
 
   return (
-    <div className="container mx-auto flex flex-col items-center justify-center gap-8 py-8 md:py-12">
-      <div className="w-full flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <div className="text-center sm:text-left flex-1">
-          <h1 className="font-headline text-4xl font-bold tracking-tight text-primary sm:text-5xl lg:text-6xl">Definition Detective</h1>
-          <p className="mt-4 max-w-2xl text-lg text-foreground/80">
-            A text-first word puzzle tuned for daily retention: one shared daily challenge plus endless practice.
-          </p>
+    <div className="container mx-auto h-full flex flex-col items-center justify-start gap-[0.075rem] pt-0 pb-1 overflow-hidden md:pb-2">
+      {/* Menu Overlay */}
+      {menuOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50"
+          onClick={() => setMenuOpen(false)}
+        />
+      )}
+
+
+      {/* Menu Panel */}
+      <div
+        className={cn(
+          "fixed top-0 right-0 h-screen w-64 bg-card border-l shadow-lg z-50 transform transition-transform duration-300 ease-in-out flex flex-col",
+          menuOpen ? "translate-x-0" : "translate-x-full"
+        )}
+      >
+        <div className="flex items-center justify-between p-4 border-b">
+          <h2 className="font-semibold text-lg">Menu</h2>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setMenuOpen(false)}
+          >
+            <X className="h-5 w-5" />
+          </Button>
         </div>
-        <div className="flex flex-col gap-2 sm:items-end text-xs sm:text-sm">
-          <div className="flex items-center justify-center sm:justify-end gap-1">
-            <Award className="h-4 w-4 text-primary" />
-            <span>Score: <span className="font-semibold">{(user ? score : 0).toLocaleString()}</span></span>
-          </div>
-          <div className="flex items-center justify-center sm:justify-end gap-1">
-            <Lightbulb className="h-4 w-4 text-amber-500" />
-            <span>Hints: <span className="font-semibold">{profileLoading ? "..." : hasUnlimitedHints ? "Unlimited" : userProfile?.hints ?? 0}</span></span>
-          </div>
-          <div className="flex items-center justify-center sm:justify-end gap-1">
-            {gameMode === "daily" ? <Flame className="h-4 w-4 text-primary" /> : <Target className="h-4 w-4 text-primary" />}
-            <span>{gameMode === "daily" ? "Streak" : "Level"}: <span className="font-semibold">{gameMode === "daily" ? dailyStreak : user ? level : 1}</span></span>
-          </div>
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          {hasAdFreeExperience && (
+            <div className="rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-xs font-medium text-green-700 dark:text-green-300">
+              Premium: Ads Disabled
+            </div>
+          )}
+
+          {/* Audio Controls Button */}
+          <Button
+            variant={activeMenuTab === "audio" ? "default" : "outline"}
+            className="w-full justify-start"
+            onClick={() => setActiveMenuTab(activeMenuTab === "audio" ? null : "audio")}
+          >
+            <Music className="h-4 w-4 mr-2" />
+            Audio Settings
+          </Button>
+
+          {/* Audio Controls Content */}
+          {activeMenuTab === "audio" && (
+            <div className="ml-4 mb-4 p-3 border rounded-md bg-muted/30 space-y-3">
+              <BackgroundMusicControls className="w-full" />
+            </div>
+          )}
+
+          {/* How to Play Button */}
+          <Button
+            variant={activeMenuTab === "how-to-play" ? "default" : "outline"}
+            className="w-full justify-start"
+            onClick={() => setActiveMenuTab(activeMenuTab === "how-to-play" ? null : "how-to-play")}
+          >
+            <Sparkles className="h-4 w-4 mr-2" />
+            How to Play
+          </Button>
+
+          {/* How to Play Content */}
+          {activeMenuTab === "how-to-play" && (
+            <div className="ml-4 mb-4 p-3 border rounded-md bg-muted/30 space-y-3 text-sm">
+              <div>
+                <p className="font-semibold text-primary mb-2 flex items-center gap-2">
+                  <Sparkles className="h-4 w-4" />
+                  Quick Start
+                </p>
+                <p className="text-muted-foreground">Read the definition card, then tap one letter to begin. You only get six misses.</p>
+              </div>
+              <div className="border-t pt-3">
+                <p className="font-semibold mb-2">Tips:</p>
+                <ul className="list-disc list-inside text-muted-foreground space-y-1">
+                  <li>Start with common vowels</li>
+                  <li>Use hints strategically</li>
+                  <li>Try visual clues for extra help</li>
+                  <li>Solve the daily challenge to build streaks</li>
+                </ul>
+              </div>
+            </div>
+          )}
+
+          {/* Feedback Button */}
+          <Button
+            variant={activeMenuTab === "feedback" ? "default" : "outline"}
+            className="w-full justify-start"
+            onClick={() => setActiveMenuTab(activeMenuTab === "feedback" ? null : "feedback")}
+          >
+            <Share className="h-4 w-4 mr-2" />
+            Feedback
+          </Button>
+
+          {/* Feedback Form Content */}
+          {activeMenuTab === "feedback" && (
+            <div className="ml-4 mb-4 p-3 border rounded-md bg-muted/30 space-y-3 text-sm">
+              <p className="text-muted-foreground text-xs">We'd love to hear from you! Share your thoughts to help us improve.</p>
+              <input
+                type="email"
+                placeholder="Your email"
+                className="w-full px-2 py-1 text-sm border rounded-md bg-background"
+              />
+              <textarea
+                placeholder="Your feedback..."
+                rows={3}
+                className="w-full px-2 py-1 text-sm border rounded-md bg-background"
+              />
+              <Button
+                size="sm"
+                className="w-full text-xs"
+                onClick={() => {
+                  toast({
+                    title: "Thanks!",
+                    description: "Your feedback has been recorded.",
+                  });
+                  setActiveMenuTab(null);
+                }}
+              >
+                Send Feedback
+              </Button>
+            </div>
+          )}
+
+          {/* About This Game Link */}
+          <Button variant="outline" className="w-full justify-start" asChild>
+            <Link href="/about">
+              <Award className="h-4 w-4 mr-2" />
+              About This Game
+            </Link>
+          </Button>
+
+          {/* Leaderboard Link */}
+          <Button variant="outline" className="w-full justify-start" asChild>
+            <Link href="/leaderboard">
+              <Trophy className="h-4 w-4 mr-2" />
+              Leaderboard
+            </Link>
+          </Button>
+
+          {/* Pricing Link */}
+          <Button variant="outline" className="w-full justify-start" asChild>
+            <Link href="/pricing">
+              <Crown className="h-4 w-4 mr-2" />
+              Pricing
+            </Link>
+          </Button>
+
+          {/* Share The Game Button */}
+          <Button
+            variant={activeMenuTab === "share" ? "default" : "outline"}
+            className="w-full justify-start"
+            onClick={() => setActiveMenuTab(activeMenuTab === "share" ? null : "share")}
+          >
+            <Share className="h-4 w-4 mr-2" />
+            Share The Game
+          </Button>
+
+          {/* Share Content */}
+          {activeMenuTab === "share" && (
+            <div className="ml-4 mb-4 p-3 border rounded-md bg-muted/30 space-y-3 text-sm">
+              <p className="text-muted-foreground text-xs">Share Definition Detective with friends!</p>
+              <div className="flex justify-center gap-2">
+                <ShareButton platform="whatsapp" text={shareText} />
+                <ShareButton platform="facebook" text={shareText} />
+                <ShareButton platform="x" text={shareText} />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      <section className="w-full max-w-3xl space-y-3">
-        <div className="grid grid-cols-2 gap-2 rounded-lg border bg-muted/30 p-1">
-          <Button
-            variant={gameMode === "daily" ? "default" : "ghost"}
-            className="w-full"
-            onClick={() => loadDailyChallenge()}
-          >
-            <CalendarDays className="mr-2 h-4 w-4" /> Daily Challenge
-          </Button>
-          <Button
-            variant={gameMode === "practice" ? "default" : "ghost"}
-            className="w-full"
-            onClick={() => {
-              setGameMode("practice");
-              startPracticeGame(level, wordData?.word);
-            }}
-          >
-            <Target className="mr-2 h-4 w-4" /> Practice Mode
-          </Button>
+      {/* Top Controls */}
+      <div className="w-full flex justify-between items-start mb-0">
+        <div className="flex flex-col gap-1">
+          <div className="flex items-stretch gap-2">
+            <Button
+              variant={gameMode === "daily" ? "default" : "outline"}
+              size="sm"
+              onClick={() => loadDailyChallenge()}
+              className="h-auto min-h-9 w-[120px] gap-1.5 px-2 py-1.5"
+              title="Daily Challenge"
+            >
+              <CalendarDays className="h-4 w-4 shrink-0 self-start mt-0.5" />
+              <span className="whitespace-normal break-words text-left leading-tight">
+                Daily Challenge
+              </span>
+            </Button>
+            <Button
+              variant={gameMode === "practice" ? "default" : "outline"}
+              size="sm"
+              onClick={() => {
+                setGameMode("practice");
+                startPracticeGame(level, wordData?.word);
+              }}
+              className="gap-1"
+              title="Practice Mode"
+            >
+              <Target className="h-4 w-4" />
+              <span>Practice</span>
+            </Button>
+          </div>
+          <div className="flex flex-col gap-0.5 text-xs">
+            <div className="flex items-center gap-0.5">
+              <Award className="h-4 w-4 text-primary" />
+              <span className="font-bold">Score: <span className="font-mono">{(user ? score : 0).toLocaleString()}</span></span>
+            </div>
+            <div className="flex items-center gap-0.5">
+              <Lightbulb className="h-4 w-4 text-amber-500" />
+              <span className="font-bold">Hints: <span className="font-mono">{profileLoading ? "..." : hasUnlimitedHints ? "Unlimited" : userProfile?.hints ?? 0}</span></span>
+            </div>
+            <div className="flex items-center gap-0.5">
+              {gameMode === "daily" ? <Flame className="h-4 w-4 text-primary" /> : <Target className="h-4 w-4 text-primary" />}
+              <span className="font-bold">{gameMode === "daily" ? "Streak" : "Level"}: <span className="font-mono">{gameMode === "daily" ? dailyStreak : user ? level : 1}</span></span>
+            </div>
+          </div>
+          {user && gameMode === "practice" && (
+            <div className="max-w-[224px]">
+              <ThemeSelector
+                selectedTheme={selectedTheme}
+                onThemeChange={async (theme) => {
+                  setSelectedTheme(theme);
+                  if (user?.uid) {
+                    await updateUserTheme({ userId: user.uid, theme });
+                  }
+                  await startPracticeGame(level, wordData?.word, theme);
+                }}
+                isPremium={isPremium}
+                compact={true}
+                onUpgradeClick={() => {
+                  window.location.href = "/subscribe";
+                }}
+              />
+            </div>
+          )}
         </div>
-        <p className="text-center text-sm text-muted-foreground">
-          Daily uses one global word each UTC day. Practice stays unlimited.
-        </p>
-      </section>
-
-      {user && gameMode === "practice" && (
-        <div className="w-full max-w-md">
-          <ThemeSelector
-            selectedTheme={selectedTheme}
-            onThemeChange={async (theme) => {
-              setSelectedTheme(theme);
-              if (user?.uid) {
-                await updateUserTheme({ userId: user.uid, theme });
-              }
-              await startPracticeGame(level, wordData?.word, theme);
-            }}
-            isPremium={isPremium}
-            onUpgradeClick={() => {
-              window.location.href = "/subscribe";
-            }}
-          />
-        </div>
-      )}
-
-      {gameContent()}
-
-      <BackgroundMusicControls />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setMenuOpen(true)}
+          className="relative self-start"
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+      </div>
+      <div className="w-full flex-1 overflow-hidden">
+        {gameContent()}
+      </div>
     </div>
   );
 }

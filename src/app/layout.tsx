@@ -2,8 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import Providers from '@/components/providers';
 import Header from '@/components/header';
-import Script from 'next/script';
-import AdsterraBannerAd from '@/components/ads/AdsterraBannerAd';
+import PremiumAwareAds from '@/components/ads/PremiumAwareAds';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://traylapps.com'),
@@ -75,13 +74,6 @@ export default function RootLayout({
           rel="stylesheet"
         />
         <meta name="theme-color" content="#0f172a" />
-        {/* Google AdSense Auto Ads Script */}
-        <Script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2955575113938000"
-          crossOrigin="anonymous"
-          strategy="beforeInteractive"
-        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
@@ -92,7 +84,7 @@ export default function RootLayout({
           <div className="relative flex min-h-screen w-full flex-col">
             <Header />
             <main className="flex-1">{children}</main>
-            <AdsterraBannerAd />
+            <PremiumAwareAds />
           </div>
         </Providers>
       </body>

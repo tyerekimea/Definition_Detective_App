@@ -80,6 +80,10 @@ export default function ProfilePage() {
   };
 
   const loading = authLoading || profileLoading;
+  const hasAdFreeExperience =
+    Boolean(userProfile?.isPremium) ||
+    userProfile?.subscriptionStatus === 'active' ||
+    userProfile?.subscriptionStatus === 'expiring';
 
   if (loading || !userProfile) {
     return (
@@ -193,6 +197,16 @@ export default function ProfilePage() {
                       </Badge>
                     </div>
                   )}
+
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle className="h-6 w-6 text-emerald-500" />
+                      <span className="font-medium">Ads</span>
+                    </div>
+                    <Badge className={hasAdFreeExperience ? "bg-emerald-600" : "bg-muted text-foreground"}>
+                      {hasAdFreeExperience ? "Disabled (Premium)" : "Enabled"}
+                    </Badge>
+                  </div>
                   
                   {userProfile.subscriptionEndDate && (
                     <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">

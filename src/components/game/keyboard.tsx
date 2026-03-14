@@ -55,7 +55,7 @@ export function Keyboard({
                 variant="outline"
                 aria-label={`Letter ${key}, ${statusLabel}`}
                 className={cn(
-                  "relative h-11 w-9 p-0 text-lg font-bold uppercase sm:h-12 sm:w-10 sm:text-xl lg:h-14 lg:w-11 lg:text-2xl",
+                  "relative h-10 w-8 p-0 text-xl font-bold uppercase sm:h-11 sm:w-9 sm:text-2xl lg:h-12 lg:w-10 lg:text-3xl",
                   "transition-transform duration-200 ease-out",
                   isCorrect &&
                     "border-[hsl(var(--correct))] bg-[hsl(var(--correct))/0.2] text-foreground hover:bg-[hsl(var(--correct))/0.25]",

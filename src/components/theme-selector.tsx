@@ -25,6 +25,7 @@ interface ThemeSelectorProps {
   onThemeChange: (theme: WordTheme) => void;
   isPremium: boolean;
   onUpgradeClick?: () => void;
+  compact?: boolean;
 }
 
 export function ThemeSelector({
@@ -32,6 +33,7 @@ export function ThemeSelector({
   onThemeChange,
   isPremium,
   onUpgradeClick,
+  compact = false,
 }: ThemeSelectorProps) {
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
 
@@ -50,9 +52,9 @@ export function ThemeSelector({
   return (
     <>
       <div className="flex flex-col gap-2">
-        <label className="text-sm font-medium">Word Theme</label>
+        {!compact && <label className="text-sm font-medium">Word Theme</label>}
         <Select value={selectedTheme} onValueChange={handleThemeSelect}>
-          <SelectTrigger className="w-full">
+          <SelectTrigger className={compact ? "h-8 w-full text-xs" : "w-full"}>
             <SelectValue>
               <div className="flex items-center gap-2">
                 <span>{WORD_THEMES[selectedTheme].icon}</span>
@@ -76,9 +78,11 @@ export function ThemeSelector({
             )}
           </SelectContent>
         </Select>
-        <p className="text-xs text-muted-foreground">
-          {WORD_THEMES[selectedTheme].description}
-        </p>
+        {!compact && (
+          <p className="text-xs text-muted-foreground">
+            {WORD_THEMES[selectedTheme].description}
+          </p>
+        )}
       </div>
 
       <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>

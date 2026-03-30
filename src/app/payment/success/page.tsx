@@ -27,12 +27,19 @@ function PaymentSuccessContent() {
       setVerifying(true);
       setError(null);
 
-      const headers: Record<string, string> = {
-        'x-user-id': user?.uid || '',
-      };
+      // ✅ Get Firebase ID token for authentication
+      if (!user) {
+        setError('User not authenticated. Please sign in again.');
+        setVerified(false);
+        return;
+      }
+
+      const idToken = await user.getIdToken();
 
       const response = await fetch(`/api/paystack/verify?reference=${ref}`, {
-        headers,
+        headers: {
+          'Authorization': `Bearer ${idToken}`,
+        },
       });
       const result = await response.json();
 
@@ -40,7 +47,7 @@ function PaymentSuccessContent() {
         setVerified(true);
         console.log('Payment verified successfully');
       } else {
-        setError('Could not verify payment. Please contact support.');
+        setError(result.error || 'Could not verify payment. Please contact support.');
         setVerified(false);
       }
     } catch (error: any) {

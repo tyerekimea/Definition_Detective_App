@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from '@/lib/firebase-admin';
 
+const isDev = process.env.NODE_ENV !== 'production';
+
 /**
  * Clear Current User's Word History
  * 
@@ -44,7 +46,7 @@ export async function POST(request: NextRequest) {
     // ✅ SECURITY FIX #2: Get authenticated user ID directly from token
     // This prevents any user spoofing attempts
     const userId = decodedToken.uid;
-    console.log(`[clear-my-words] Clearing history for user: ${userId}`);
+    if (isDev) console.log(`[clear-my-words] Clearing history for user: ${userId}`);
 
     try {
       // ✅ SECURITY FIX #3: Use authenticated user ID directly (no parameters accepted)
@@ -138,7 +140,7 @@ export async function GET(request: NextRequest) {
 
     // ✅ SECURITY FIX #3: Get authenticated user ID from token
     const userId = decodedToken.uid;
-    console.log(`[clear-my-words] GET: Clearing history for user: ${userId}`);
+    if (isDev) console.log(`[clear-my-words] GET: Clearing history for user: ${userId}`);
 
     try {
       const firestore = getFirestore();
@@ -167,7 +169,7 @@ export async function GET(request: NextRequest) {
         await batch.commit();
       }
 
-      console.log(`[clear-my-words] GET: Cleared ${deletedCount} word records for user: ${userId}`);
+      if (isDev) console.log(`[clear-my-words] GET: Cleared ${deletedCount} word records for user: ${userId}`);
       
       return NextResponse.json({
         success: true,

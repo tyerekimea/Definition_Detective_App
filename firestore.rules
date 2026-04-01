@@ -55,7 +55,24 @@ service cloud.firestore {
     
     match /leaderboardEntries/{leaderboardEntryId} {
         allow read: if true;
-        allow create, update: if isSignedIn();
+
+        // Only the owner may create an entry for their own UID and valid score
+        allow create: if isSignedIn() &&
+                      request.resource.data.userId == request.auth.uid &&
+                      request.resource.data.score is number &&
+                      request.resource.data.score >= 0 &&
+                      request.resource.data.score <= 10000;
+
+        // Only owner may update and only to a higher score (anti-cheat)
+        allow update: if isSignedIn() &&
+                      resource.data.userId == request.auth.uid &&
+                      request.resource.data.userId == request.auth.uid &&
+                      request.resource.data.score is number &&
+                      request.resource.data.score > resource.data.score &&
+                      request.resource.data.score <= resource.data.score + 500;
+
+        // Owner can delete their own entry
+        allow delete: if isOwner(resource.data.userId);
     }
     
     match /userProfiles/{userId}/gameSessions/{gameSessionId} {

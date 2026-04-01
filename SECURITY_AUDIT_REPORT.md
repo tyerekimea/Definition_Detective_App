@@ -246,12 +246,22 @@ match /leaderboardEntries/{leaderboardEntryId} {
 ```firestore
 match /leaderboardEntries/{leaderboardEntryId} {
     allow read: if true;
-    // Only owner can create/update their own
-    allow create: if isSignedIn() && 
-                    request.resource.data.userId == request.auth.uid;
-    allow update: if isSignedIn() && 
-                    resource.data.userId == request.auth.uid &&
-                    request.resource.data.score > resource.data.score;
+
+    // Only owner can create an entry for themselves within score limits
+    allow create: if isSignedIn() &&
+                  request.resource.data.userId == request.auth.uid &&
+                  request.resource.data.score is number &&
+                  request.resource.data.score >= 0 &&
+                  request.resource.data.score <= 10000;
+
+    // Only owner can update and only to a valid increased score; prevents rollback/fraud
+    allow update: if isSignedIn() &&
+                  resource.data.userId == request.auth.uid &&
+                  request.resource.data.userId == request.auth.uid &&
+                  request.resource.data.score is number &&
+                  request.resource.data.score > resource.data.score &&
+                  request.resource.data.score <= resource.data.score + 500;
+
     allow delete: if isOwner(resource.data.userId);
 }
 ```

@@ -11,6 +11,7 @@ import type { UserProfile } from '@/lib/firebase-types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { hasActiveSubscription as hasActiveSubscriptionNow } from '@/lib/subscription';
 
 const plans = [
   {
@@ -59,8 +60,7 @@ export function SubscriptionPlans() {
   const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
 
   // Check if user has active subscription
-  const hasActiveSubscription = userProfile?.isPremium && 
-    userProfile?.subscriptionStatus === 'active';
+  const hasActiveSubscription = hasActiveSubscriptionNow(userProfile);
   
   const currentPlan = userProfile?.subscriptionPlan;
 

@@ -166,7 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error("Error deleting account:", error);
         setLoading(false);
     }
-  }, [user, firestore, auth, router]);
+  }, [user, firestore, router]);
 
   const sendPasswordReset = useCallback(async (email: string) => {
     try {

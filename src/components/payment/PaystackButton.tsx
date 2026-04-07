@@ -76,7 +76,27 @@ export function PaystackButton({
           }
         );
 
-        const result = await response.json();
+        const contentType = response.headers.get('content-type') || '';
+        const rawBody = await response.text();
+        let result: any = {};
+
+        if (rawBody) {
+          if (contentType.includes('application/json')) {
+            try {
+              result = JSON.parse(rawBody);
+            } catch (parseError) {
+              console.error('Failed to parse JSON verify response:', parseError, rawBody.slice(0, 200));
+              throw new Error('Payment verification returned malformed JSON response.');
+            }
+          } else {
+            console.error('Non-JSON verify response:', {
+              status: response.status,
+              contentType,
+              body: rawBody.slice(0, 200),
+            });
+            throw new Error('Payment verification returned an unexpected response format.');
+          }
+        }
 
         if (response.ok && result.success) {
           console.log('Payment verified successfully:', result);

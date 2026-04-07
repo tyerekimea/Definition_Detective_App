@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,13 +16,7 @@ function PaymentSuccessContent() {
   const [verified, setVerified] = useState(!reference); // If no reference, assume verified
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (reference) {
-      verifyPaymentReference(reference);
-    }
-  }, [reference]);
-
-  const verifyPaymentReference = async (ref: string) => {
+  const verifyPaymentReference = useCallback(async (ref: string) => {
     try {
       setVerifying(true);
       setError(null);
@@ -41,7 +35,31 @@ function PaymentSuccessContent() {
           'Authorization': `Bearer ${idToken}`,
         },
       });
-      const result = await response.json();
+      const contentType = response.headers.get('content-type') || '';
+      const rawBody = await response.text();
+      let result: any = {};
+
+      if (rawBody) {
+        if (contentType.includes('application/json')) {
+          try {
+            result = JSON.parse(rawBody);
+          } catch (parseError) {
+            console.error('Malformed JSON response from verify endpoint:', parseError, rawBody.slice(0, 200));
+            setError('Server returned malformed verification data.');
+            setVerified(false);
+            return;
+          }
+        } else {
+          console.error('Unexpected non-JSON response from verify endpoint:', {
+            status: response.status,
+            contentType,
+            body: rawBody.slice(0, 200),
+          });
+          setError('Server returned an unexpected response format during verification.');
+          setVerified(false);
+          return;
+        }
+      }
 
       if (response.ok && result.success) {
         setVerified(true);
@@ -57,7 +75,13 @@ function PaymentSuccessContent() {
     } finally {
       setVerifying(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (reference) {
+      verifyPaymentReference(reference);
+    }
+  }, [reference, verifyPaymentReference]);
 
   return (
     <div className="container mx-auto py-12 px-4 flex items-center justify-center min-h-[60vh]">

@@ -9,8 +9,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        body: ['Literata', 'serif'],
-        headline: ['Literata', 'serif'],
+        body: ['var(--font-literata)', 'serif'],
+        headline: ['var(--font-literata)', 'serif'],
         code: ['monospace'],
       },
       colors: {

@@ -3,7 +3,7 @@
 import { useAuth } from '@/hooks/use-auth';
 import { isAdmin } from '@/lib/admin';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,19 +43,7 @@ export default function AdminDashboard() {
   const [selectedUserId, setSelectedUserId] = useState('');
   const [hintsToAdd, setHintsToAdd] = useState(10);
 
-  useEffect(() => {
-    if (!loading && (!user || !isAdmin(user))) {
-      router.push('/');
-    }
-  }, [user, loading, router]);
-
-  useEffect(() => {
-    if (user && isAdmin(user)) {
-      loadDashboardData();
-    }
-  }, [user]);
-
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     if (!user?.email) return;
     
     setLoadingData(true);
@@ -78,7 +66,19 @@ export default function AdminDashboard() {
     } finally {
       setLoadingData(false);
     }
-  };
+  }, [toast, user]);
+
+  useEffect(() => {
+    if (!loading && (!user || !isAdmin(user))) {
+      router.push('/');
+    }
+  }, [user, loading, router]);
+
+  useEffect(() => {
+    if (user && isAdmin(user)) {
+      loadDashboardData();
+    }
+  }, [user, loadDashboardData]);
 
   const handleGrantPremium = async (userId: string) => {
     if (!user?.email) return;

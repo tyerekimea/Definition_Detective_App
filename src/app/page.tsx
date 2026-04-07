@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useTransition, useRef } from
 import Link from "next/link";
 import { type WordData, type WordTheme, getRankForScore, wordList } from "@/lib/game-data";
 import { generateImageDescription } from "@/ai/flows/generate-image-description-flow";
-import { useHintAction, generateWordWithTheme, updateUserTheme, getUserTheme } from "@/lib/actions";
+import { useHintAction as hintAction, generateWordWithTheme, updateUserTheme, getUserTheme } from "@/lib/actions";
 import { THEME_FALLBACK_WORDS } from "@/lib/word-utils";
 import { ThemeSelector } from "@/components/theme-selector";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,7 @@ import { FirestorePermissionError } from "@/firebase/errors";
 import type { UserProfile } from "@/lib/firebase-types";
 import ShareButton from "@/components/game/share-button";
 import BackgroundMusicControls from "@/components/audio/BackgroundMusicControls";
+import { hasPremiumAccess } from "@/lib/subscription";
 
 type GameState = "playing" | "won" | "lost";
 type Difficulty = "easy" | "medium" | "hard";
@@ -197,11 +198,7 @@ export default function Home() {
   const userProfileRef = useMemoFirebase(() => (user ? doc(firestore, "userProfiles", user.uid) : null), [firestore, user]);
   const { data: userProfile, isLoading: profileLoading } = useDoc<UserProfile>(userProfileRef);
 
-  const hasUnlimitedHints =
-    Boolean(userProfile?.isPremium) ||
-    userProfile?.subscriptionStatus === "active" ||
-    userProfile?.subscriptionStatus === "expiring" ||
-    isPremium;
+  const hasUnlimitedHints = hasPremiumAccess(userProfile) || isPremium;
   const hasAdFreeExperience = hasUnlimitedHints;
 
   const { toast } = useToast();
@@ -212,6 +209,19 @@ export default function Home() {
       setLevel(userProfile.highestLevel);
     }
   }, [userProfile]);
+
+  useEffect(() => {
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -467,7 +477,7 @@ export default function Home() {
           setTimeout(() => reject(new Error("Hint generation timed out. Please try again.")), 60000);
         });
 
-        const hintPromise = useHintAction({
+        const hintPromise = hintAction({
           userId: user ? user.uid : null,
           word: wordData.word,
           wordLength: wordData.word.length,
@@ -623,18 +633,18 @@ export default function Home() {
     const hintDisabled = isHintLoading || allLettersGuessed || !user || profileLoading;
 
     return (
-      <div className="w-full max-w-4xl mx-auto -mt-3 space-y-0">
+      <div className="mx-auto flex h-full w-full max-w-5xl flex-col gap-2 overflow-hidden">
 
-        <Card aria-labelledby="definition-title" className="max-w-[627px] mx-auto">
-          <CardHeader className="p-3 pb-1">
+        <Card aria-labelledby="definition-title" className="mx-auto w-full max-w-[720px] shrink-0">
+          <CardHeader className="p-2 pb-1 sm:p-3 sm:pb-1">
             <CardTitle id="definition-title" className="text-center flex items-center justify-center gap-2">
               {gameMode === "daily" && <CalendarDays className="h-5 w-5 text-primary" />}
               {gameMode === "daily" ? `Daily Definition (${dailyDateKey})` : "Definition"}
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-3 pt-0">
+          <CardContent className="p-2 pt-0 sm:p-3 sm:pt-0">
             <p
-              className="rounded-md bg-muted/50 p-2 text-left font-serif text-xl text-muted-foreground"
+              className="line-clamp-4 rounded-md bg-muted/50 p-2 text-left font-serif text-sm text-muted-foreground sm:text-base md:text-lg"
               aria-live="polite"
               aria-label="Word definition clue"
             >
@@ -645,7 +655,7 @@ export default function Home() {
 
         <div
           className={cn(
-            "mt-0 mb-4 flex flex-wrap items-center justify-center gap-2 md:gap-4",
+            "mb-1 flex shrink-0 flex-wrap items-center justify-center gap-1.5 sm:gap-2 md:gap-3",
             lastGuessOutcome === "incorrect" && "animate-shake",
             lastGuessOutcome === "correct" && "animate-slot-pop"
           )}
@@ -653,7 +663,7 @@ export default function Home() {
           {displayedWord.map(({ char, revealed }, index) => (
             <div
               key={index}
-              className="flex h-12 w-12 items-center justify-center rounded-md border-b-4 border-primary bg-muted/30 font-mono text-4xl font-bold uppercase md:h-16 md:w-16 md:text-5xl"
+              className="flex h-10 w-10 items-center justify-center rounded-md border-b-4 border-primary bg-muted/30 font-mono text-2xl font-bold uppercase sm:h-11 sm:w-11 sm:text-3xl md:h-12 md:w-12 md:text-4xl"
             >
               {revealed && <span className="animate-tile-reveal">{char}</span>}
             </div>
@@ -661,7 +671,7 @@ export default function Home() {
         </div>
 
         {gameState === "won" || gameState === "lost" ? (
-          <Alert variant={gameState === "won" ? "default" : "destructive"} className="text-center">
+          <Alert variant={gameState === "won" ? "default" : "destructive"} className="mx-auto w-full max-w-[720px] text-center">
             {gameState === "won" ? <PartyPopper className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
             <AlertTitle className="text-2xl font-bold">
               {gameMode === "daily"
@@ -745,27 +755,29 @@ export default function Home() {
           </Alert>
         ) : (
           <>
-            <div className="mt-0 flex flex-wrap justify-center gap-2">
+            <div className="mt-0 flex shrink-0 flex-wrap justify-center gap-2">
               <Button onClick={() => getHint(false)} disabled={hintDisabled}>
                 <Lightbulb className={cn("mr-2 h-4 w-4", isHintLoading && "animate-spin")} />
                 {isHintLoading ? "Getting Hint..." : "Use a Hint"}
               </Button>
             </div>
 
-            {!user && <p className="text-center text-sm text-muted-foreground">Please log in to use hints and save progress.</p>}
+            {!user && <p className="shrink-0 text-center text-xs text-muted-foreground sm:text-sm">Please log in to use hints and save progress.</p>}
 
-            <p className="text-center text-muted-foreground">
+            <p className="shrink-0 text-center text-xs text-muted-foreground sm:text-sm">
               Incorrect Guesses: {guessedLetters.incorrect.join(", ").toUpperCase() || "None"} ({incorrectTriesLeft} left)
             </p>
 
-            <div className="mx-auto w-full max-w-[560px]">
-              <Keyboard
-                onKeyClick={handleGuess}
-                guessedLetters={guessedLetters}
-                revealedByHint={revealedByHint}
-                lastInteractedLetter={lastInteractedLetter}
-                lastGuessOutcome={lastGuessOutcome}
-              />
+            <div className="flex min-h-0 flex-1 items-end">
+              <div className="mx-auto w-full max-w-[560px]">
+                <Keyboard
+                  onKeyClick={handleGuess}
+                  guessedLetters={guessedLetters}
+                  revealedByHint={revealedByHint}
+                  lastInteractedLetter={lastInteractedLetter}
+                  lastGuessOutcome={lastGuessOutcome}
+                />
+              </div>
             </div>
           </>
         )}
@@ -775,7 +787,7 @@ export default function Home() {
   };
 
   return (
-    <div className="container mx-auto h-full flex flex-col items-center justify-start gap-[0.075rem] pt-0 pb-1 overflow-hidden md:pb-2">
+    <div className="container mx-auto flex h-full min-h-0 flex-col items-center justify-start gap-2 overflow-hidden px-2 pt-2 pb-2 sm:px-4 sm:pt-3 sm:pb-3">
       {/* Menu Overlay */}
       {menuOpen && (
         <div
@@ -948,18 +960,19 @@ export default function Home() {
       </div>
 
       {/* Top Controls */}
-      <div className="w-full flex justify-between items-start mb-0">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-stretch gap-2">
+      <div className="w-full shrink-0">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <div className="flex flex-wrap items-stretch gap-2">
             <Button
               variant={gameMode === "daily" ? "default" : "outline"}
               size="sm"
               onClick={() => loadDailyChallenge()}
-              className="h-auto min-h-9 w-[120px] gap-1.5 px-2 py-1.5"
+              className="h-auto min-h-8 w-[118px] gap-1.5 px-2 py-1"
               title="Daily Challenge"
             >
-              <CalendarDays className="h-4 w-4 shrink-0 self-start mt-0.5" />
-              <span className="whitespace-normal break-words text-left leading-tight">
+              <CalendarDays className="mt-0.5 h-3.5 w-3.5 shrink-0 self-start" />
+              <span className="whitespace-normal break-words text-left text-xs leading-tight sm:text-sm">
                 Daily Challenge
               </span>
             </Button>
@@ -970,57 +983,61 @@ export default function Home() {
                 setGameMode("practice");
                 startPracticeGame(level, wordData?.word);
               }}
-              className="gap-1"
+              className="h-8 gap-1 px-2 text-xs sm:text-sm"
               title="Practice Mode"
             >
-              <Target className="h-4 w-4" />
+              <Target className="h-3.5 w-3.5" />
               <span>Practice</span>
             </Button>
+            </div>
+            <div className="flex flex-wrap items-center gap-1 text-[11px] sm:text-xs">
+              <div className="inline-flex items-center gap-1 rounded-md border bg-muted/40 px-1.5 py-0.5">
+                <Award className="h-3.5 w-3.5 text-primary" />
+                <span className="font-bold">Score:</span>
+                <span className="font-mono">{(user ? score : 0).toLocaleString()}</span>
+              </div>
+              <div className="inline-flex items-center gap-1 rounded-md border bg-muted/40 px-1.5 py-0.5">
+                <Lightbulb className="h-3.5 w-3.5 text-amber-500" />
+                <span className="font-bold">Hints:</span>
+                <span className="font-mono">{profileLoading ? "..." : hasUnlimitedHints ? "Unlimited" : userProfile?.hints ?? 0}</span>
+              </div>
+              <div className="inline-flex items-center gap-1 rounded-md border bg-muted/40 px-1.5 py-0.5">
+                {gameMode === "daily" ? <Flame className="h-3.5 w-3.5 text-primary" /> : <Target className="h-3.5 w-3.5 text-primary" />}
+                <span className="font-bold">{gameMode === "daily" ? "Streak:" : "Level:"}</span>
+                <span className="font-mono">{gameMode === "daily" ? dailyStreak : user ? level : 1}</span>
+              </div>
+            </div>
+            {user && gameMode === "practice" && (
+              <div className="max-w-[220px]">
+                <ThemeSelector
+                  selectedTheme={selectedTheme}
+                  onThemeChange={async (theme) => {
+                    setSelectedTheme(theme);
+                    if (user?.uid) {
+                      await updateUserTheme({ userId: user.uid, theme });
+                    }
+                    await startPracticeGame(level, wordData?.word, theme);
+                  }}
+                  isPremium={isPremium}
+                  compact={true}
+                  onUpgradeClick={() => {
+                    window.location.href = "/subscribe";
+                  }}
+                />
+              </div>
+            )}
           </div>
-          <div className="flex flex-col gap-0.5 text-xs">
-            <div className="flex items-center gap-0.5">
-              <Award className="h-4 w-4 text-primary" />
-              <span className="font-bold">Score: <span className="font-mono">{(user ? score : 0).toLocaleString()}</span></span>
-            </div>
-            <div className="flex items-center gap-0.5">
-              <Lightbulb className="h-4 w-4 text-amber-500" />
-              <span className="font-bold">Hints: <span className="font-mono">{profileLoading ? "..." : hasUnlimitedHints ? "Unlimited" : userProfile?.hints ?? 0}</span></span>
-            </div>
-            <div className="flex items-center gap-0.5">
-              {gameMode === "daily" ? <Flame className="h-4 w-4 text-primary" /> : <Target className="h-4 w-4 text-primary" />}
-              <span className="font-bold">{gameMode === "daily" ? "Streak" : "Level"}: <span className="font-mono">{gameMode === "daily" ? dailyStreak : user ? level : 1}</span></span>
-            </div>
-          </div>
-          {user && gameMode === "practice" && (
-            <div className="max-w-[224px]">
-              <ThemeSelector
-                selectedTheme={selectedTheme}
-                onThemeChange={async (theme) => {
-                  setSelectedTheme(theme);
-                  if (user?.uid) {
-                    await updateUserTheme({ userId: user.uid, theme });
-                  }
-                  await startPracticeGame(level, wordData?.word, theme);
-                }}
-                isPremium={isPremium}
-                compact={true}
-                onUpgradeClick={() => {
-                  window.location.href = "/subscribe";
-                }}
-              />
-            </div>
-          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setMenuOpen(true)}
+            className="relative h-8 w-8 self-start p-0"
+          >
+            <Menu className="h-4 w-4" />
+          </Button>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setMenuOpen(true)}
-          className="relative self-start"
-        >
-          <Menu className="h-5 w-5" />
-        </Button>
       </div>
-      <div className="w-full flex-1 overflow-hidden">
+      <div className="w-full min-h-0 flex-1 overflow-hidden">
         {gameContent()}
       </div>
     </div>

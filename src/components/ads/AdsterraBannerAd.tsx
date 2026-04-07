@@ -22,14 +22,20 @@ export default function AdsterraBannerAd() {
     const container = document.getElementById('adsterra-banner-ad-container');
     if (!container) return;
 
+    const isMobile = window.matchMedia('(max-width: 640px)').matches;
+    const adWidth = isMobile ? 320 : 468;
+    const adHeight = isMobile ? 50 : 60;
+
     container.innerHTML = '';
     window.atOptions = {
       key: ADSTERRA_BANNER_KEY,
       format: 'iframe',
-      height: 60,
-      width: 468,
+      height: adHeight,
+      width: adWidth,
       params: {},
     };
+    container.style.minWidth = `${adWidth}px`;
+    container.style.minHeight = `${adHeight}px`;
 
     const script = document.createElement('script');
     script.src = ADSTERRA_BANNER_SRC;
@@ -42,9 +48,9 @@ export default function AdsterraBannerAd() {
   }, []);
 
   return (
-    <div className="w-full border-t bg-muted/20 py-3">
-      <div className="mx-auto flex w-full max-w-[468px] items-center justify-center overflow-x-auto px-4">
-        <div id="adsterra-banner-ad-container" style={{ minWidth: 468, minHeight: 60 }} />
+    <div className="w-full shrink-0 border-t bg-muted/20 py-2 sm:py-3">
+      <div className="mx-auto flex w-full items-center justify-center px-2 sm:px-4">
+        <div id="adsterra-banner-ad-container" />
       </div>
     </div>
   );

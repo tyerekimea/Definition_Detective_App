@@ -26,9 +26,9 @@ export function Keyboard({
   lastGuessOutcome = null,
 }: KeyboardProps) {
   return (
-    <div className="flex w-full flex-col items-center gap-2 md:gap-3">
+    <div className="flex w-full flex-col items-center gap-1.5 sm:gap-2">
       {keys.map((row, rowIndex) => (
-        <div key={rowIndex} className="flex w-full justify-center gap-1.5 md:gap-2">
+        <div key={rowIndex} className="flex w-full justify-center gap-1 sm:gap-1.5">
           {row.map((key) => {
             const lowerKey = key.toLowerCase();
             const isCorrect = guessedLetters.correct.includes(lowerKey);
@@ -55,7 +55,7 @@ export function Keyboard({
                 variant="outline"
                 aria-label={`Letter ${key}, ${statusLabel}`}
                 className={cn(
-                  "relative h-10 w-8 p-0 text-xl font-bold uppercase sm:h-11 sm:w-9 sm:text-2xl lg:h-12 lg:w-10 lg:text-3xl",
+                  "relative h-8 w-7 p-0 text-base font-bold uppercase sm:h-9 sm:w-8 sm:text-lg md:h-10 md:w-9 md:text-xl",
                   "transition-transform duration-200 ease-out",
                   isCorrect &&
                     "border-[hsl(var(--correct))] bg-[hsl(var(--correct))/0.2] text-foreground hover:bg-[hsl(var(--correct))/0.25]",

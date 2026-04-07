@@ -6,6 +6,7 @@ import { generateHint } from '@/ai/flows/generate-hints';
 import { generateWord } from '@/ai/flows/generate-word-flow';
 import type { GenerateHintInput } from '@/ai/schemas/hint';
 import type { WordTheme } from '@/lib/game-data';
+import { hasPremiumAccess } from '@/lib/subscription';
 
 export async function useHintAction(data: GenerateHintInput & { userId?: string | null, isFree?: boolean }): Promise<{ success: boolean; message?: string; hint?: string; }> {
   try {
@@ -23,10 +24,7 @@ export async function useHintAction(data: GenerateHintInput & { userId?: string 
           }
 
           const userData = userDoc.data() || {};
-          const isPremium =
-            Boolean(userData.isPremium) ||
-            userData.subscriptionStatus === 'active' ||
-            userData.subscriptionStatus === 'expiring';
+          const isPremium = hasPremiumAccess(userData);
 
           // Premium users have unlimited hints, do not decrement.
           if (isPremium) {
@@ -185,7 +183,7 @@ export async function getUserTheme(userId: string): Promise<{ theme: WordTheme; 
       const userData = userDoc.data();
       return {
         theme: (userData?.selectedTheme as WordTheme) || 'current',
-        isPremium: userData?.isPremium || false,
+        isPremium: hasPremiumAccess(userData),
       };
     }
 

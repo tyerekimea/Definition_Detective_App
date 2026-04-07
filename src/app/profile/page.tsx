@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { hasActiveSubscription, hasPremiumAccess } from "@/lib/subscription";
 
 export default function ProfilePage() {
   const { user, loading: authLoading, updateUsername, deleteAccount } = useAuth();
@@ -80,10 +81,9 @@ export default function ProfilePage() {
   };
 
   const loading = authLoading || profileLoading;
-  const hasAdFreeExperience =
-    Boolean(userProfile?.isPremium) ||
-    userProfile?.subscriptionStatus === 'active' ||
-    userProfile?.subscriptionStatus === 'expiring';
+  const hasActiveSubscriptionAccess = hasActiveSubscription(userProfile);
+  const hasPremiumAccessNow = hasPremiumAccess(userProfile);
+  const hasAdFreeExperience = hasPremiumAccessNow;
 
   if (loading || !userProfile) {
     return (
@@ -132,7 +132,7 @@ export default function ProfilePage() {
                   <h1 className="text-4xl font-bold font-headline">{userProfile.username}</h1>
                 )}
                 <p className="text-muted-foreground">{userProfile.email}</p>
-                {userProfile.isPremium && (
+                {hasPremiumAccessNow && (
                   <Badge className="mt-2 bg-gradient-to-r from-yellow-500 to-orange-500">
                     <Crown className="h-3 w-3 mr-1" />
                     Premium Member
@@ -169,7 +169,7 @@ export default function ProfilePage() {
             </div>
             
             {/* Subscription Status */}
-            {userProfile.isPremium && (
+            {hasPremiumAccessNow && (
               <div>
                 <h3 className="text-lg font-semibold mb-2">Subscription</h3>
                 <div className="space-y-3">
@@ -179,11 +179,13 @@ export default function ProfilePage() {
                       <div>
                         <span className="font-medium block">Status</span>
                         <span className="text-sm text-muted-foreground capitalize">
-                          {userProfile.subscriptionStatus || 'Active'}
+                          {hasActiveSubscriptionAccess ? (userProfile.subscriptionStatus || 'active') : 'expired'}
                         </span>
                       </div>
                     </div>
-                    <Badge className="bg-green-500">Active</Badge>
+                    <Badge className={hasActiveSubscriptionAccess ? "bg-green-500" : "bg-muted text-foreground"}>
+                      {hasActiveSubscriptionAccess ? "Active" : "Expired"}
+                    </Badge>
                   </div>
                   
                   {userProfile.subscriptionPlan && (
@@ -227,7 +229,7 @@ export default function ProfilePage() {
               </div>
             )}
             
-            {!userProfile.isPremium && (
+            {!hasPremiumAccessNow && (
               <div className="p-4 rounded-lg bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20">
                 <div className="flex items-center gap-3 mb-2">
                   <Crown className="h-6 w-6 text-yellow-500" />

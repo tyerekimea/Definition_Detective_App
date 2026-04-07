@@ -15,7 +15,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:openai": "tsx test-openai.ts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "genkit:dev": "genkit start -- tsx studio/src/ai/dev.ts",
     "genkit:watch": "genkit start -- tsx --watch studio/src/ai/dev.ts",
     "android": "npx cap open android",
@@ -29,7 +29,6 @@
   "dependencies": {
     "@capacitor/android": "^8.0.0",
     "@capacitor/app": "^8.0.0",
-    "@capacitor/cli": "^8.0.2",
     "@capacitor/core": "^8.0.0",
     "@capacitor/haptics": "^8.0.0",
     "@capacitor/ios": "^8.0.0",
@@ -63,7 +62,7 @@
     "@radix-ui/react-tabs": "^1.1.0",
     "@radix-ui/react-toast": "^1.2.1",
     "@radix-ui/react-tooltip": "^1.1.2",
-    "axios": "^1.13.2",
+    "axios": "^1.14.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
@@ -74,7 +73,7 @@
     "genkit": "^1.28.0",
     "genkitx-openai": "^0.29.0",
     "lucide-react": "^0.417.0",
-    "next": "^16.1.6",
+    "next": "^16.2.2",
     "patch-package": "^8.0.0",
     "react": "18.3.1",
     "react-day-picker": "^8.10.1",
@@ -85,7 +84,6 @@
     "tailwind-merge": "^2.4.0",
     "tailwindcss-animate": "^1.0.7",
     "use-sound": "^4.0.3",
-    "vercel": "^28.18.5",
     "wav": "^1.0.2",
     "zod": "^3.23.8"
   },
@@ -93,9 +91,17 @@
     "@paystack/inline-js": "2.19.2",
     "react-paystack": {
       "@paystack/inline-js": "2.19.2"
-    }
+    },
+    "fast-xml-parser": "^5.5.9",
+    "handlebars": "^4.7.9",
+    "node-forge": "^1.4.0",
+    "@xmldom/xmldom": "^0.8.12",
+    "path-to-regexp": "0.1.13",
+    "@tootallnate/once": "^3.0.1",
+    "lodash": "^4.17.24"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.3.0",
     "@testing-library/jest-dom": "^6.1.5",
     "@testing-library/react": "^14.1.2",
     "@types/jest": "^29.5.11",
@@ -112,6 +118,7 @@
     "postcss": "^8.4.35",
     "tailwindcss": "^3.4.1",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vercel": "^50.38.1"
   }
 }

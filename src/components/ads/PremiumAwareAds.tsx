@@ -6,6 +6,7 @@ import AdsterraBannerAd from '@/components/ads/AdsterraBannerAd';
 import { useAuth } from '@/hooks/use-auth';
 import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import type { UserProfile } from '@/lib/firebase-types';
+import { hasPremiumAccess } from '@/lib/subscription';
 
 const ADSENSE_AUTO_ADS_SRC =
   'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2955575113938000';
@@ -20,10 +21,7 @@ export default function PremiumAwareAds() {
   );
   const { data: userProfile, isLoading: profileLoading } = useDoc<UserProfile>(userProfileRef);
 
-  const isPremium =
-    Boolean(userProfile?.isPremium) ||
-    userProfile?.subscriptionStatus === 'active' ||
-    userProfile?.subscriptionStatus === 'expiring';
+  const isPremium = hasPremiumAccess(userProfile);
 
   // Avoid showing ads to premium users while auth/profile state is still loading.
   if (authLoading || (user && profileLoading)) {

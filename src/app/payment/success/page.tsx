@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/use-auth';
+import { buildApiUrl } from '@/lib/api-url';
 
 function PaymentSuccessContent() {
   const { user } = useAuth();
@@ -30,7 +31,7 @@ function PaymentSuccessContent() {
 
       const idToken = await user.getIdToken();
 
-      const response = await fetch(`/api/paystack/verify?reference=${ref}`, {
+      const response = await fetch(buildApiUrl(`/api/paystack/verify?reference=${encodeURIComponent(ref)}`), {
         headers: {
           'Authorization': `Bearer ${idToken}`,
         },
@@ -55,6 +56,13 @@ function PaymentSuccessContent() {
             contentType,
             body: rawBody.slice(0, 200),
           });
+          if (response.status === 404 || rawBody.includes('<!DOCTYPE')) {
+            setError(
+              'Payment API is unavailable on this deployment. Please redeploy the web app without static export and retry.'
+            );
+            setVerified(false);
+            return;
+          }
           setError('Server returned an unexpected response format during verification.');
           setVerified(false);
           return;

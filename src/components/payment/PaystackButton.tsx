@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { Loader2, AlertCircle } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useToast } from '@/hooks/use-toast';
+import { buildApiUrl } from '@/lib/api-url';
 
 interface PaystackButtonProps {
   amount: number; // in NGN
@@ -70,7 +71,7 @@ export function PaystackButton({
         }
 
         const response = await fetch(
-          `/api/paystack/verify?reference=${reference}`,
+          buildApiUrl(`/api/paystack/verify?reference=${encodeURIComponent(reference)}`),
           {
             headers,
           }
@@ -94,6 +95,11 @@ export function PaystackButton({
               contentType,
               body: rawBody.slice(0, 200),
             });
+            if (response.status === 404 || rawBody.includes('<!DOCTYPE')) {
+              throw new Error(
+                'Payment API is unavailable on this deployment. Please redeploy the web app without static export and try again.'
+              );
+            }
             throw new Error('Payment verification returned an unexpected response format.');
           }
         }

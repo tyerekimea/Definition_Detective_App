@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
-const isMobileBuild = process.env.MOBILE_BUILD === 'true';
+const isVercelDeployment = process.env.VERCEL === '1';
+const isMobileBuild = process.env.MOBILE_BUILD === 'true' && !isVercelDeployment;
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,

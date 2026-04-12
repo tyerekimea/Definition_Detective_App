@@ -2,56 +2,28 @@
 
 import { useEffect } from 'react';
 
-declare global {
-  interface Window {
-    atOptions?: {
-      key: string;
-      format: 'iframe';
-      height: number;
-      width: number;
-      params: Record<string, string>;
-    };
-  }
-}
-
-const ADSTERRA_BANNER_KEY = 'a11b4fd46462b1eb8ba03d78e8e103ba';
-const ADSTERRA_BANNER_SRC = `https://www.highperformanceformat.com/${ADSTERRA_BANNER_KEY}/invoke.js`;
+const ADSTERRA_SOCIAL_BAR_SRC =
+  'https://pl28782229.profitablecpmratenetwork.com/1c/41/28/1c4128aa095d1c5bc5c19d7522c67c67.js';
+const ADSTERRA_SOCIAL_BAR_SCRIPT_ID = 'adsterra-social-bar-script';
 
 export default function AdsterraBannerAd() {
   useEffect(() => {
-    const container = document.getElementById('adsterra-banner-ad-container');
-    if (!container) return;
-
-    const isMobile = window.matchMedia('(max-width: 640px)').matches;
-    const adWidth = isMobile ? 320 : 468;
-    const adHeight = isMobile ? 50 : 60;
-
-    container.innerHTML = '';
-    window.atOptions = {
-      key: ADSTERRA_BANNER_KEY,
-      format: 'iframe',
-      height: adHeight,
-      width: adWidth,
-      params: {},
-    };
-    container.style.minWidth = `${adWidth}px`;
-    container.style.minHeight = `${adHeight}px`;
+    const existingScript = document.getElementById(ADSTERRA_SOCIAL_BAR_SCRIPT_ID);
+    if (existingScript) return;
 
     const script = document.createElement('script');
-    script.src = ADSTERRA_BANNER_SRC;
+    script.id = ADSTERRA_SOCIAL_BAR_SCRIPT_ID;
+    script.src = ADSTERRA_SOCIAL_BAR_SRC;
     script.async = true;
-    container.appendChild(script);
+    document.body.appendChild(script);
 
     return () => {
-      container.innerHTML = '';
+      const mountedScript = document.getElementById(ADSTERRA_SOCIAL_BAR_SCRIPT_ID);
+      if (mountedScript) {
+        mountedScript.remove();
+      }
     };
   }, []);
 
-  return (
-    <div className="w-full shrink-0 border-t bg-muted/20 py-2 sm:py-3">
-      <div className="mx-auto flex w-full items-center justify-center px-2 sm:px-4">
-        <div id="adsterra-banner-ad-container" />
-      </div>
-    </div>
-  );
+  return null;
 }

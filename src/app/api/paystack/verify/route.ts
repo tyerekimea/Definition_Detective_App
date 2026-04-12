@@ -4,6 +4,29 @@ import { getFirestore, FieldValue } from '@/lib/firebase-admin';
 import { getAuth } from 'firebase-admin/auth';
 import { calculateSubscriptionEndDate, inferSubscriptionPlan, parseDateLike } from '@/lib/subscription';
 
+const VERIFY_CORS_HEADERS: Record<string, string> = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Headers': 'Authorization, Content-Type, x-user-id',
+  'Access-Control-Max-Age': '86400',
+};
+
+function jsonWithCors(body: unknown, init?: { status?: number }) {
+  const response = NextResponse.json(body, init);
+  Object.entries(VERIFY_CORS_HEADERS).forEach(([key, value]) => {
+    response.headers.set(key, value);
+  });
+  return response;
+}
+
+export async function OPTIONS() {
+  const response = new NextResponse(null, { status: 204 });
+  Object.entries(VERIFY_CORS_HEADERS).forEach(([key, value]) => {
+    response.headers.set(key, value);
+  });
+  return response;
+}
+
 /**
  * Payment Verification Endpoint
  * 
@@ -23,7 +46,7 @@ export async function GET(req: NextRequest) {
   // ✅ SECURITY FIX #1: Validate reference parameter
   if (!reference) {
     console.error('❌ [VERIFY] No reference provided');
-    return NextResponse.json({ error: 'Reference is required' }, { status: 400 });
+    return jsonWithCors({ error: 'Reference is required' }, { status: 400 });
   }
 
   try {
@@ -32,7 +55,7 @@ export async function GET(req: NextRequest) {
     
     if (!authHeader?.startsWith('Bearer ')) {
       console.error('❌ [VERIFY] Missing or invalid authorization header');
-      return NextResponse.json(
+      return jsonWithCors(
         { error: 'Unauthorized - authentication token required' },
         { status: 401 }
       );
@@ -46,7 +69,7 @@ export async function GET(req: NextRequest) {
       console.log('✅ [VERIFY] Token verified for user:', decodedToken.uid);
     } catch (tokenError: any) {
       console.error('❌ [VERIFY] Token verification failed:', tokenError.message);
-      return NextResponse.json(
+      return jsonWithCors(
         { error: 'Invalid or expired token' },
         { status: 401 }
       );
@@ -88,7 +111,7 @@ export async function GET(req: NextRequest) {
 
     if (result.data.status !== 'success') {
       console.error('❌ [VERIFY] Payment not successful:', result.data.status);
-      return NextResponse.json(
+      return jsonWithCors(
         { 
           success: false,
           error: 'Payment verification failed', 
@@ -108,7 +131,7 @@ export async function GET(req: NextRequest) {
     // ✅ SECURITY FIX #4: Validate metadata has user ID
     if (!paymentUserId) {
       console.error('❌ [VERIFY] Missing userId in metadata:', metadata);
-      return NextResponse.json(
+      return jsonWithCors(
         { error: 'Invalid payment metadata' },
         { status: 400 }
       );
@@ -121,7 +144,7 @@ export async function GET(req: NextRequest) {
         '❌ [VERIFY] User mismatch:',
         `Authenticated: ${authenticatedUserId}, Payment: ${paymentUserId}`
       );
-      return NextResponse.json(
+      return jsonWithCors(
         { error: 'Cannot verify another user\'s payment' },
         { status: 403 }
       );
@@ -204,13 +227,13 @@ export async function GET(req: NextRequest) {
         console.error('❌ [VERIFY] Failed to log error:', e);
       }
 
-      return NextResponse.json(
+      return jsonWithCors(
         { error: 'Failed to process payment' },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({
+    return jsonWithCors({
       success: true,
       message: 'Payment verified and processed successfully',
       data: {
@@ -221,7 +244,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (error: any) {
     console.error('❌ [VERIFY] Unexpected error:', error.message);
-    return NextResponse.json(
+    return jsonWithCors(
       { error: 'Internal server error' },
       { status: 500 }
     );

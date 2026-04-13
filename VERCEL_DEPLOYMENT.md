@@ -219,7 +219,7 @@ Access your dashboard: https://vercel.com/dashboard
 
 ---
 
-## 💰 Pricing
+## 💰 Store
 
 **Hobby Plan (Free):**
 - ✅ Unlimited deployments

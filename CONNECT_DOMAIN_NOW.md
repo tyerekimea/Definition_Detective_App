@@ -56,7 +56,7 @@ The domain is on another project. Fix it:
 
 ### Check Ads
 - https://traylapps.com (game over screen)
-- https://traylapps.com/pricing
+- https://traylapps.com/store
 - https://traylapps.com/profile
 
 ---

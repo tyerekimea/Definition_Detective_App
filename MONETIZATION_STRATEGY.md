@@ -138,13 +138,13 @@ This document outlines multiple monetization strategies for Definition Detective
 - License game for schools/universities
 - Custom word lists for curriculum
 - Teacher dashboard for student progress
-- **Pricing:** $500-2,000 per institution/year
+- **Store:** $500-2,000 per institution/year
 
 #### Corporate Training
 - Vocabulary building for employees
 - Team building exercises
 - Custom branded versions
-- **Pricing:** $1,000-5,000 per company/year
+- **Store:** $1,000-5,000 per company/year
 
 #### Implementation Priority: LOW (Future expansion)
 **Target:** After 50,000+ users
@@ -152,7 +152,7 @@ This document outlines multiple monetization strategies for Definition Detective
 
 ---
 
-## Pricing Strategy
+## Store Strategy
 
 ### Subscription Tiers
 
@@ -181,7 +181,7 @@ This document outlines multiple monetization strategies for Definition Detective
 - ✅ API access
 - ✅ White-label option
 
-### Annual Pricing (20% discount)
+### Annual Store (20% discount)
 - Premium: $39.99/year (save $20)
 - Premium Plus: $79.99/year (save $40)
 
@@ -210,7 +210,7 @@ This document outlines multiple monetization strategies for Definition Detective
 **Files to Create:**
 - `src/lib/stripe.ts` - Stripe integration
 - `src/app/api/stripe/` - Webhook handlers
-- `src/components/pricing/` - Pricing components
+- `src/components/store/` - Store components
 - `src/app/subscribe/` - Subscription page
 
 ### Phase 2: Advertising (Weeks 3-4)

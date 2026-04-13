@@ -29,7 +29,7 @@ PAYSTACK_SECRET_KEY=sk_test_...
 NEXT_PUBLIC_APP_URL=http://localhost:9003
 ```
 
-### 1.4 Pricing (Nigerian Naira)
+### 1.4 Store (Nigerian Naira)
 **Subscriptions:**
 - Premium Monthly: ₦2,000/month (~$2.50 USD)
 - Premium Yearly: ₦20,000/year (~$25 USD)
@@ -228,7 +228,7 @@ function getHintsFromPrice(amount: number | null): number {
 }
 ```
 
-### 2.3 Create Pricing Page
+### 2.3 Create Store Page
 
 Create `src/app/subscribe/page.tsx`:
 ```typescript
@@ -620,7 +620,7 @@ const canUseHint = isPremium || (userProfile?.hints ?? 0) > 0;
 - [ ] Ads don't break layout
 
 ### User Experience
-- [ ] Pricing page is clear
+- [ ] Store page is clear
 - [ ] Purchase flow is smooth
 - [ ] Error messages are helpful
 - [ ] Premium features are locked for free users

@@ -238,7 +238,7 @@ export default function ProfilePage() {
                 <p className="text-sm text-muted-foreground mb-3">
                   Get unlimited hints, ad-free experience, and exclusive features!
                 </p>
-                <Button className="w-full" onClick={() => router.push('/pricing')}>
+                <Button className="w-full" onClick={() => router.push('/store')}>
                   View Plans
                 </Button>
               </div>

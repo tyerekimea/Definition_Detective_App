@@ -103,7 +103,7 @@ Visit: **https://publishers.monetag.com/**
 ### Step 3: Check Ads
 Visit these pages and look for ads:
 - https://traylapps.com (play until game over)
-- https://traylapps.com/pricing
+- https://traylapps.com/store
 - https://traylapps.com/profile
 
 ---

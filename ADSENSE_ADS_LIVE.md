@@ -6,7 +6,7 @@ Updated your code with **real AdSense ad slot IDs**:
 
 ### Your Ad Slot IDs:
 1. **3043059051** - Game Over Ad
-2. **7657091487** - Pricing/Store Ad  
+2. **7657091487** - Store/Store Ad  
 3. **8058925474** - Profile/Sidebar Ad
 
 ### Ad Placements:
@@ -14,7 +14,7 @@ Updated your code with **real AdSense ad slot IDs**:
 | Location | Ad Slot ID | When It Shows |
 |----------|------------|---------------|
 | **Game Over** | 3043059051 | After winning or losing a game |
-| **Pricing Page** | 7657091487 | Top of pricing page |
+| **Store Page** | 7657091487 | Top of pricing page |
 | **Profile Page** | 8058925474 | Top of profile page |
 
 ---
@@ -60,8 +60,8 @@ Go to: **https://traylapps.com**
 2. Win or lose
 3. See ad below the result ✅
 
-**Pricing Page Ad**:
-1. Go to: https://traylapps.com/pricing
+**Store Page Ad**:
+1. Go to: https://traylapps.com/store
 2. See ad at top of page ✅
 
 **Profile Page Ad**:
@@ -209,7 +209,7 @@ Keep users playing longer:
 
 ### ✅ Ad Locations:
 1. **Game Over** (3043059051) - After game ends
-2. **Pricing Page** (7657091487) - Top of pricing
+2. **Store Page** (7657091487) - Top of pricing
 3. **Profile Page** (8058925474) - Top of profile
 
 ### ✅ Code Status:

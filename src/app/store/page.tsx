@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Check, Zap, Star, Crown } from "lucide-react";
 import Link from "next/link";
 
-export default function PricingPage() {
+export default function StorePage() {
   return (
     <div className="container mx-auto py-12 px-4">
       <div className="text-center mb-12">

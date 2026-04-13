@@ -4,26 +4,79 @@ import { getFirestore, FieldValue } from '@/lib/firebase-admin';
 import { getAuth } from 'firebase-admin/auth';
 import { calculateSubscriptionEndDate, inferSubscriptionPlan, parseDateLike } from '@/lib/subscription';
 
-const VERIFY_CORS_HEADERS: Record<string, string> = {
-  'Access-Control-Allow-Origin': '*',
+const BASE_VERIFY_CORS_HEADERS: Record<string, string> = {
   'Access-Control-Allow-Methods': 'GET, OPTIONS',
   'Access-Control-Allow-Headers': 'Authorization, Content-Type, x-user-id',
   'Access-Control-Max-Age': '86400',
 };
 
-function jsonWithCors(body: unknown, init?: { status?: number }) {
-  const response = NextResponse.json(body, init);
-  Object.entries(VERIFY_CORS_HEADERS).forEach(([key, value]) => {
+function normalizeOrigin(value: string) {
+  return value.trim().replace(/\/+$/, '');
+}
+
+function getAllowedOrigins(): Set<string> {
+  const explicit = process.env.PAYSTACK_VERIFY_ALLOWED_ORIGINS
+    ?.split(',')
+    .map((value) => normalizeOrigin(value))
+    .filter(Boolean);
+
+  if (explicit?.length) {
+    return new Set(explicit);
+  }
+
+  return new Set(
+    [
+      process.env.NEXT_PUBLIC_APP_URL,
+      process.env.NEXT_PUBLIC_API_BASE_URL,
+      'https://traylapps.com',
+      'https://www.traylapps.com',
+    ]
+      .filter((value): value is string => Boolean(value))
+      .map((value) => normalizeOrigin(value))
+  );
+}
+
+const ALLOWED_VERIFY_ORIGINS = getAllowedOrigins();
+
+function resolveAllowedOrigin(req: NextRequest): string | null {
+  const requestOrigin = req.headers.get('origin');
+  if (!requestOrigin) {
+    return null;
+  }
+  const normalizedOrigin = normalizeOrigin(requestOrigin);
+  return ALLOWED_VERIFY_ORIGINS.has(normalizedOrigin) ? normalizedOrigin : null;
+}
+
+function addCorsHeaders(response: NextResponse, allowedOrigin: string | null) {
+  Object.entries(BASE_VERIFY_CORS_HEADERS).forEach(([key, value]) => {
     response.headers.set(key, value);
   });
+  response.headers.set('Vary', 'Origin');
+  if (allowedOrigin) {
+    response.headers.set('Access-Control-Allow-Origin', allowedOrigin);
+  }
+}
+
+function jsonWithCors(
+  body: unknown,
+  allowedOrigin: string | null,
+  init?: { status?: number }
+) {
+  const response = NextResponse.json(body, init);
+  addCorsHeaders(response, allowedOrigin);
   return response;
 }
 
-export async function OPTIONS() {
+export async function OPTIONS(req: NextRequest) {
+  const requestOrigin = req.headers.get('origin');
+  const allowedOrigin = resolveAllowedOrigin(req);
+
+  if (requestOrigin && !allowedOrigin) {
+    return NextResponse.json({ error: 'Origin not allowed' }, { status: 403 });
+  }
+
   const response = new NextResponse(null, { status: 204 });
-  Object.entries(VERIFY_CORS_HEADERS).forEach(([key, value]) => {
-    response.headers.set(key, value);
-  });
+  addCorsHeaders(response, allowedOrigin);
   return response;
 }
 
@@ -38,6 +91,13 @@ export async function OPTIONS() {
  * Header: Authorization: Bearer <FIREBASE_ID_TOKEN>
  */
 export async function GET(req: NextRequest) {
+  const requestOrigin = req.headers.get('origin');
+  const allowedOrigin = resolveAllowedOrigin(req);
+
+  if (requestOrigin && !allowedOrigin) {
+    return NextResponse.json({ error: 'Origin not allowed' }, { status: 403 });
+  }
+
   const searchParams = req.nextUrl.searchParams;
   const reference = searchParams.get('reference');
 
@@ -46,7 +106,7 @@ export async function GET(req: NextRequest) {
   // ✅ SECURITY FIX #1: Validate reference parameter
   if (!reference) {
     console.error('❌ [VERIFY] No reference provided');
-    return jsonWithCors({ error: 'Reference is required' }, { status: 400 });
+    return jsonWithCors({ error: 'Reference is required' }, allowedOrigin, { status: 400 });
   }
 
   try {
@@ -57,6 +117,7 @@ export async function GET(req: NextRequest) {
       console.error('❌ [VERIFY] Missing or invalid authorization header');
       return jsonWithCors(
         { error: 'Unauthorized - authentication token required' },
+        allowedOrigin,
         { status: 401 }
       );
     }
@@ -71,6 +132,7 @@ export async function GET(req: NextRequest) {
       console.error('❌ [VERIFY] Token verification failed:', tokenError.message);
       return jsonWithCors(
         { error: 'Invalid or expired token' },
+        allowedOrigin,
         { status: 401 }
       );
     }
@@ -117,6 +179,7 @@ export async function GET(req: NextRequest) {
           error: 'Payment verification failed', 
           status: result.data.status,
         },
+        allowedOrigin,
         { status: 400 }
       );
     }
@@ -133,6 +196,7 @@ export async function GET(req: NextRequest) {
       console.error('❌ [VERIFY] Missing userId in metadata:', metadata);
       return jsonWithCors(
         { error: 'Invalid payment metadata' },
+        allowedOrigin,
         { status: 400 }
       );
     }
@@ -146,6 +210,7 @@ export async function GET(req: NextRequest) {
       );
       return jsonWithCors(
         { error: 'Cannot verify another user\'s payment' },
+        allowedOrigin,
         { status: 403 }
       );
     }
@@ -229,6 +294,7 @@ export async function GET(req: NextRequest) {
 
       return jsonWithCors(
         { error: 'Failed to process payment' },
+        allowedOrigin,
         { status: 500 }
       );
     }
@@ -241,11 +307,12 @@ export async function GET(req: NextRequest) {
         amount,
         type: paymentType,
       },
-    });
+    }, allowedOrigin);
   } catch (error: any) {
     console.error('❌ [VERIFY] Unexpected error:', error.message);
     return jsonWithCors(
       { error: 'Internal server error' },
+      allowedOrigin,
       { status: 500 }
     );
   }

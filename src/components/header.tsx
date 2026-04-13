@@ -51,10 +51,10 @@ export default function Header() {
                 Leaderboard
               </Link>
               <Link
-                href="/pricing"
+                href="/store"
                 className="transition-colors hover:text-foreground/80 text-foreground/60"
               >
-                Pricing
+                Store
               </Link>
             </nav>
           )}

@@ -37,7 +37,7 @@ Repeat for each location:
 | Ad Unit Name | Location | Type |
 |--------------|----------|------|
 | Game Over Ad | After game ends | Responsive |
-| Pricing Page Ad | Top of pricing page | Responsive |
+| Store Page Ad | Top of pricing page | Responsive |
 | Profile Page Ad | Top of profile page | Responsive |
 
 ### Step 5: Update Your Code
@@ -134,12 +134,12 @@ Real ads will start showing within 24-48 hours.
 
 ### Ad Locations:
 1. **Game Over** - After winning/losing
-2. **Pricing Page** - Top of pricing page
+2. **Store Page** - Top of pricing page
 3. **Profile Page** - Top of profile page
 
 ### Ad Slot IDs Needed:
 - [ ] Game Over Ad slot ID
-- [ ] Pricing Page Ad slot ID
+- [ ] Store Page Ad slot ID
 - [ ] Profile Page Ad slot ID
 
 ---
@@ -261,7 +261,7 @@ Check AdSense dashboard daily:
 **Example**:
 ```
 Game Over Ad: 9876543210
-Pricing Page Ad: 1234567890
+Store Page Ad: 1234567890
 Profile Page Ad: 5555555555
 ```
 

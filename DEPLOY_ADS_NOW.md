@@ -7,7 +7,7 @@ Your Monetag ads are fully integrated and ready to go live. Here's what was done
 ### Files Modified
 1. ✅ `src/app/layout.tsx` - Service worker registration
 2. ✅ `src/app/page.tsx` - Game over ad
-3. ✅ `src/app/pricing/page.tsx` - Pricing page ad
+3. ✅ `src/app/store/page.tsx` - Store page ad
 4. ✅ `src/app/profile/page.tsx` - Profile page ad
 
 ### Files Already Exist
@@ -50,7 +50,7 @@ Vercel will automatically deploy in ~2 minutes!
 ### 2. Check Ads
 Visit these pages and look for ads:
 - **Game page**: Play until game over → Ad appears below result
-- **Pricing page**: `/pricing` → Ad at top of page
+- **Store page**: `/store` → Ad at top of page
 - **Profile page**: `/profile` → Ad at top of page
 
 ### 3. Verify in Monetag Dashboard
@@ -87,7 +87,7 @@ Visit these pages and look for ads:
    └─────────────────────┘
    [Next Case] [Retry]
 
-💳 Pricing Page (Top)
+💳 Store Page (Top)
    ┌─────────────────────┐
    │   💰 MONETAG AD     │
    └─────────────────────┘

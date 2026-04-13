@@ -243,7 +243,7 @@ Should show your Monetag service worker code.
 ### Test All Pages
 
 - [ ] https://traylapps.com (Game page)
-- [ ] https://traylapps.com/pricing (Pricing with ad)
+- [ ] https://traylapps.com/store (Store with ad)
 - [ ] https://traylapps.com/profile (Profile with ad)
 - [ ] https://traylapps.com/store (Store - no ad)
 

@@ -128,12 +128,12 @@ Unlock themed word generation, unlimited hints, and ad-free experience
 ### Subscription Plans
 
 **Monthly Plan:**
-- **Price:** NGN 2,000
+- **Store:** NGN 2,000
 - **Interval:** month
 - **Plan Code:** (configured in Paystack dashboard)
 
 **Yearly Plan:**
-- **Price:** NGN 20,000
+- **Store:** NGN 20,000
 - **Interval:** year
 - **Discount:** 17% (2 months free)
 - **Plan Code:** (configured in Paystack dashboard)

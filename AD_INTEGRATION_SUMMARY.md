@@ -36,7 +36,7 @@
 ```
 **Why here?** Users are engaged and waiting for next game. Highest revenue potential!
 
-#### Pricing Page (src/app/pricing/page.tsx)
+#### Store Page (src/app/store/page.tsx)
 ```tsx
 // Shows at top of pricing page
 <AdManager location="store" />

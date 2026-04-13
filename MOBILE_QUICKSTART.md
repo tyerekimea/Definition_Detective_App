@@ -419,7 +419,7 @@ npm run typecheck          # Check TypeScript
 
 ---
 
-## Pricing for App Stores
+## Store for App Stores
 
 ### Google Play Store
 - **Developer Account:** $25 (one-time)

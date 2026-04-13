@@ -13,13 +13,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 
+  if (!signature) {
+    console.warn('[paystack/webhook] Missing signature header');
+    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+  }
+
   const expectedHash = crypto
     .createHmac('sha512', process.env.PAYSTACK_SECRET_KEY)
     .update(body)
     .digest('hex');
 
-  if (!crypto.timingSafeEqual(Buffer.from(expectedHash), Buffer.from(signature))) {
-    console.warn('[paystack/webhook] Invalid signature', { expectedHash, signature });
+  const expectedBuffer = Buffer.from(expectedHash, 'utf8');
+  const signatureBuffer = Buffer.from(signature, 'utf8');
+  const hasValidLength = expectedBuffer.length === signatureBuffer.length;
+
+  if (!hasValidLength || !crypto.timingSafeEqual(expectedBuffer, signatureBuffer)) {
+    console.warn('[paystack/webhook] Invalid signature');
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
   }
 

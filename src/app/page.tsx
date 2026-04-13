@@ -927,11 +927,11 @@ export default function Home() {
             </Link>
           </Button>
 
-          {/* Pricing Link */}
+          {/* Store Link */}
           <Button variant="outline" className="w-full justify-start" asChild>
-            <Link href="/pricing">
+            <Link href="/store">
               <Crown className="h-4 w-4 mr-2" />
-              Pricing
+              Store
             </Link>
           </Button>
 

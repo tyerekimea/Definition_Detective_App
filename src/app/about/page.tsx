@@ -159,7 +159,7 @@ export default function AboutPage() {
               <Link href="/subscribe">View Premium Plans</Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/pricing">Compare Plans</Link>
+              <Link href="/store">Compare Plans</Link>
             </Button>
           </div>
         </CardContent>

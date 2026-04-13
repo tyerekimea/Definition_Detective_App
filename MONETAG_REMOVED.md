@@ -30,7 +30,7 @@ All Monetag code has been removed from your app. You're now using only Google Ad
 - Non-intrusive banner
 - Natural break point
 
-**2. Pricing Page** (`src/app/pricing/page.tsx`)
+**2. Store Page** (`src/app/store/page.tsx`)
 - Shows at top of pricing page
 - Users already thinking about money
 - Good context for ads
@@ -95,7 +95,7 @@ After deployment (2-3 minutes):
 - [ ] Visit https://traylapps.com
 - [ ] Play game until game over
 - [ ] Check for AdSense ad (should be non-intrusive)
-- [ ] Visit /pricing - check for AdSense ad
+- [ ] Visit /store - check for AdSense ad
 - [ ] Visit /profile - check for AdSense ad
 - [ ] No pop-ups or redirects ✅
 - [ ] Better user experience ✅
@@ -129,7 +129,7 @@ Visit: https://www.google.com/adsense/
 3. Click **Display ads**
 4. Create ad units for each location:
    - "Game Over Ad" (Responsive)
-   - "Pricing Page Ad" (Responsive)
+   - "Store Page Ad" (Responsive)
    - "Profile Page Ad" (Responsive)
 
 ### Step 3: Get Ad Slot IDs

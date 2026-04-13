@@ -133,7 +133,7 @@ const canSubscribe =
 
 ### Flow 1: First-Time Subscription
 
-1. User visits `/pricing` or `/subscribe`
+1. User visits `/store` or `/subscribe`
 2. Sees all plans available
 3. Clicks "Subscribe Now"
 4. Completes Paystack payment

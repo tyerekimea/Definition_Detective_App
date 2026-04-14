@@ -67,7 +67,14 @@ export async function useHintAction(data: GenerateHintInput & { userId?: string 
 
   } catch (error: any) {
     console.error('Error in useHintAction:', error);
-    return { success: false, message: error.message || 'An unexpected error occurred while getting a hint.' };
+    const rawMessage = error?.message || 'An unexpected error occurred while getting a hint.';
+    const isProviderError = /AI hint generation failed|tried models|generateContent|Forbidden|API key|quota|authentication|timed out/i.test(rawMessage);
+    return {
+      success: false,
+      message: isProviderError
+        ? 'Hint service is temporarily unavailable. Please try again shortly.'
+        : rawMessage,
+    };
   }
 }
 

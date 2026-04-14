@@ -95,6 +95,7 @@ const generateHintFlow = ai.defineFlow(
     ]));
 
     let lastErr: any = null;
+    const modelErrors: string[] = [];
     for (const candidate of candidates) {
       try {
         console.debug('[generateHintFlow] trying model candidate:', candidate);
@@ -119,6 +120,7 @@ const generateHintFlow = ai.defineFlow(
       } catch (err: any) {
         lastErr = err;
         const msg = err?.originalMessage ?? err?.message ?? String(err);
+        modelErrors.push(`${candidate}: ${msg}`);
         
         // Check for common errors that should trigger fallback
         const notFound = /not found/i.test(msg) || /NOT_FOUND/.test(msg);
@@ -136,14 +138,54 @@ const generateHintFlow = ai.defineFlow(
       }
     }
 
-    // If we get here, all models failed
+    // If we get here, all models failed. Fall back to deterministic local hint
+    // so gameplay remains available even during provider outages or permission issues.
+    const fallback = buildDeterministicHint(input);
     const tried = candidates.join(', ');
     const finalMsg = lastErr?.originalMessage ?? lastErr?.message ?? String(lastErr ?? 'no response');
-    throw new Error(
-      `AI hint generation failed — tried models: [${tried}]. Last error: ${finalMsg}`
+    console.warn(
+      `[generateHintFlow] All AI models failed; using deterministic fallback. Tried: [${tried}]. Last error: ${finalMsg}. Errors: ${modelErrors.join(' | ')}`
     );
+    return fallback;
   }
 );
+
+function buildDeterministicHint(input: GenerateHintInput): GenerateHintOutput {
+  const wordChars = input.word.split('');
+  const forbidden = new Set(
+    (input.incorrectGuesses || '')
+      .toLowerCase()
+      .split('')
+      .filter(Boolean)
+  );
+
+  const availableUnique: string[] = [];
+  const seen = new Set<string>();
+  for (const char of wordChars) {
+    const lower = char.toLowerCase();
+    if (forbidden.has(lower)) continue;
+    if (seen.has(lower)) continue;
+    seen.add(lower);
+    availableUnique.push(lower);
+  }
+
+  const targetCount = Math.max(1, input.lettersToReveal);
+  const chosenLetters = availableUnique.slice(0, targetCount);
+  const chosenSet = new Set(chosenLetters);
+
+  const hint = wordChars
+    .map((char) => (chosenSet.has(char.toLowerCase()) ? char : '_'))
+    .join('');
+
+  return {
+    reasoning:
+      chosenLetters.length > 0
+        ? `Fallback hint selected ${chosenLetters.length} safe unique letter(s): ${chosenLetters.join(', ')}.`
+        : 'Fallback hint could not reveal letters because all available letters are blocked by incorrect guesses.',
+    chosenLetters,
+    hint,
+  };
+}
 
 // Validation function to ensure the hint follows the rules
 function validateAndFixHint(

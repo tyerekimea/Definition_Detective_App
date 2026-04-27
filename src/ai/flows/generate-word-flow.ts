@@ -65,38 +65,79 @@ const generateWordFlow = ai.defineFlow(
     outputSchema: GenerateWordOutputSchema,
   },
   async input => {
+    const hasDeepSeekKey = Boolean(process.env.DEEPSEEK_API_KEY?.trim());
+    const hasGoogleAIKey = Boolean(
+      process.env.GEMINI_API_KEY?.trim() || process.env.GOOGLE_GENAI_API_KEY?.trim()
+    );
+    const perModelTimeoutMs = Math.max(1500, Number(process.env.WORD_MODEL_TIMEOUT_MS || 9000));
+    const totalFlowTimeoutMs = Math.max(
+      perModelTimeoutMs,
+      Number(process.env.WORD_FLOW_TIMEOUT_MS || 25000)
+    );
+
     // Build prioritized candidate list:
     // 1) explicit `GOOGLE_GENAI_MODEL`
     // 2) comma-separated `GOOGLE_GENAI_MODEL_CANDIDATES`
     // 3) sensible defaults (try common model ids)
-    const explicit = process.env.GOOGLE_GENAI_MODEL?.trim();
+    const explicit = sanitizeModelCandidate(process.env.GOOGLE_GENAI_MODEL);
     const listFromEnv = (process.env.GOOGLE_GENAI_MODEL_CANDIDATES || '')
       .split(',')
-      .map(s => s.trim())
+      .map(s => sanitizeModelCandidate(s))
       .filter(Boolean);
     const defaultCandidates = [
-      // OpenAI models - best for word generation
-      'openai/gpt-4o-mini',                 // Fast, cheap, reliable
-      'openai/gpt-4o',                      // High quality
-      // Gemini models - fallback
-      'googleai/gemini-2.5-flash',          // Fast, stable
-      'googleai/gemini-2.5-pro',            // Higher quality
-      'googleai/gemini-2.5-flash-lite'      // Lowest cost
+      ...(hasDeepSeekKey
+        ? [
+            // DeepSeek models (through OpenAI-compatible endpoint)
+            'openai/deepseek-chat',
+            'openai/deepseek-reasoner',
+          ]
+        : []),
+      ...(hasGoogleAIKey
+        ? [
+            // Gemini models - fallback
+            'googleai/gemini-2.5-flash',
+            'googleai/gemini-2.5-pro',
+            'googleai/gemini-2.5-flash-lite',
+          ]
+        : []),
     ];
     const candidates = Array.from(new Set([
       ...(explicit ? [explicit] : []),
       ...listFromEnv,
       ...defaultCandidates,
-    ]));
+    ])).filter((candidate) =>
+      isModelAllowedForConfiguredProviders(candidate, hasDeepSeekKey, hasGoogleAIKey)
+    );
 
     let lastErr: any = null;
+    const modelErrors: string[] = [];
+    const blockedProviders = new Set<string>();
+    const startedAt = Date.now();
+
+    if (candidates.length === 0) {
+      throw new Error('No usable AI model candidates are configured for generateWordFlow.');
+    }
+
     for (const candidate of candidates) {
+      if (Date.now() - startedAt > totalFlowTimeoutMs) {
+        lastErr = new Error(`Word flow timeout exceeded (${totalFlowTimeoutMs}ms)`);
+        break;
+      }
+
+      const provider = getProviderFromModel(candidate);
+      if (provider && blockedProviders.has(provider)) {
+        continue;
+      }
+
       try {
         console.debug('[generateWordFlow] trying model candidate:', candidate);
         
         // Add timeout to prevent hanging
         const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Model request timed out after 30 seconds')), 30000);
+          setTimeout(
+            () => reject(new Error(`Model request timed out after ${perModelTimeoutMs}ms`)),
+            perModelTimeoutMs
+          );
         });
         
         const promptPromise = prompt(input, { model: candidate });
@@ -111,11 +152,17 @@ const generateWordFlow = ai.defineFlow(
       } catch (err: any) {
         const msg = err?.originalMessage ?? err?.message ?? String(err);
         lastErr = err;
+        modelErrors.push(`${candidate}: ${msg}`);
         
         // Check for common errors that should trigger fallback
         const notFound = /not found/i.test(msg) || /NOT_FOUND/.test(msg);
-        const authError = /401|Incorrect API key|Invalid API key|authentication/i.test(msg);
+        const authError = /401|403|Incorrect API key|Invalid API key|authentication|forbidden|denied access/i.test(msg);
         const rateLimitError = /429|rate limit|quota/i.test(msg);
+        const providerUnavailable = /timed out|ECONN|fetch failed|network/i.test(msg);
+
+        if (provider && (authError || providerUnavailable || notFound)) {
+          blockedProviders.add(provider);
+        }
         
         if (notFound || authError || rateLimitError) {
           console.warn(`[generateWordFlow] model "${candidate}" failed: ${msg} — trying next`);
@@ -132,7 +179,43 @@ const generateWordFlow = ai.defineFlow(
     const tried = candidates.join(', ');
     const finalMsg = lastErr?.originalMessage ?? lastErr?.message ?? String(lastErr ?? 'no response');
     throw new Error(
-      `AI model request failed — tried models: [${tried}]. Last error: ${finalMsg}`
+      `AI model request failed — tried models: [${tried}]. Last error: ${finalMsg}. Errors: ${modelErrors.join(' | ')}`
     );
   }
 );
+
+function sanitizeModelCandidate(value: string | undefined | null): string {
+  const model = (value || '').trim().replace(/^['"]|['"]$/g, '');
+  if (!model) return '';
+
+  // Known legacy/unsupported IDs for current generateContent usage.
+  if (/^googleai\/gemini-2\.0-flash-exp$/i.test(model)) {
+    return '';
+  }
+  // Drop non-DeepSeek OpenAI model IDs. DeepSeek models are OpenAI-compatible
+  // but use `openai/deepseek-*` model names.
+  if (model.startsWith('openai/') && !model.startsWith('openai/deepseek-')) {
+    return '';
+  }
+
+  return model;
+}
+
+function getProviderFromModel(modelId: string): string | null {
+  if (modelId.startsWith('openai/deepseek-')) return 'deepseek';
+  if (modelId.startsWith('openai/')) return 'openai-compat';
+  if (modelId.startsWith('googleai/')) return 'googleai';
+  return null;
+}
+
+function isModelAllowedForConfiguredProviders(
+  modelId: string,
+  hasDeepSeekKey: boolean,
+  hasGoogleAIKey: boolean
+): boolean {
+  if (!modelId) return false;
+  if (modelId.startsWith('openai/deepseek-')) return hasDeepSeekKey;
+  if (modelId.startsWith('openai/')) return false;
+  if (modelId.startsWith('googleai/')) return hasGoogleAIKey;
+  return true;
+}

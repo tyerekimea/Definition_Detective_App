@@ -50,3 +50,4 @@ yarn-error.log*
 openai_key
 .vercel
 .env.vercel
+definition-detective.keystore

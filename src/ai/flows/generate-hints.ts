@@ -70,39 +70,79 @@ const generateHintFlow = ai.defineFlow(
     outputSchema: GenerateHintOutputSchema,
   },
   async input => {
+    const hasDeepSeekKey = Boolean(process.env.DEEPSEEK_API_KEY?.trim());
+    const hasGoogleAIKey = Boolean(
+      process.env.GEMINI_API_KEY?.trim() || process.env.GOOGLE_GENAI_API_KEY?.trim()
+    );
+    const perModelTimeoutMs = Math.max(1500, Number(process.env.HINT_MODEL_TIMEOUT_MS || 9000));
+    const totalFlowTimeoutMs = Math.max(
+      perModelTimeoutMs,
+      Number(process.env.HINT_FLOW_TIMEOUT_MS || 25000)
+    );
+
     // Build prioritized candidate list:
     // 1) explicit `GOOGLE_GENAI_MODEL`
     // 2) comma-separated `GOOGLE_GENAI_MODEL_CANDIDATES`
     // 3) sensible defaults (try common model ids)
-    const explicit = process.env.GOOGLE_GENAI_MODEL?.trim();
+    const explicit = sanitizeModelCandidate(process.env.GOOGLE_GENAI_MODEL);
     const listFromEnv = (process.env.GOOGLE_GENAI_MODEL_CANDIDATES || '')
       .split(',')
-      .map(s => s.trim())
+      .map(s => sanitizeModelCandidate(s))
       .filter(Boolean);
     const defaultCandidates = [
-      // OpenAI models - best for precise instructions
-      'openai/gpt-4o-mini',                 // Fast, cheap, reliable
-      'openai/gpt-4o',                      // High quality
-      // Gemini models - fallback
-      'googleai/gemini-2.5-flash',          // Fast, stable
-      'googleai/gemini-2.5-pro',            // Higher quality
-      'googleai/gemini-2.5-flash-lite'      // Lowest cost
+      ...(hasDeepSeekKey
+        ? [
+            // DeepSeek models (through OpenAI-compatible endpoint)
+            'openai/deepseek-chat',
+            'openai/deepseek-reasoner',
+          ]
+        : []),
+      ...(hasGoogleAIKey
+        ? [
+            // Gemini models - fallback
+            'googleai/gemini-2.5-flash', // Fast, stable
+            'googleai/gemini-2.5-pro', // Higher quality
+            'googleai/gemini-2.5-flash-lite', // Lowest cost
+          ]
+        : []),
     ];
     const candidates = Array.from(new Set([
       ...(explicit ? [explicit] : []),
       ...listFromEnv,
       ...defaultCandidates,
-    ]));
+    ])).filter((candidate) =>
+      isModelAllowedForConfiguredProviders(candidate, hasDeepSeekKey, hasGoogleAIKey)
+    );
+
+    if (candidates.length === 0) {
+      console.warn('[generateHintFlow] No AI providers configured; using deterministic fallback.');
+      return buildDeterministicHint(input);
+    }
 
     let lastErr: any = null;
     const modelErrors: string[] = [];
+    const blockedProviders = new Set<string>();
+    const startedAt = Date.now();
     for (const candidate of candidates) {
+      if (Date.now() - startedAt > totalFlowTimeoutMs) {
+        lastErr = new Error(`Hint flow timeout exceeded (${totalFlowTimeoutMs}ms)`);
+        break;
+      }
+
+      const provider = getProviderFromModel(candidate);
+      if (provider && blockedProviders.has(provider)) {
+        continue;
+      }
+
       try {
         console.debug('[generateHintFlow] trying model candidate:', candidate);
         
         // Add timeout to prevent hanging
         const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Model request timed out after 60 seconds')), 60000);
+          setTimeout(
+            () => reject(new Error(`Model request timed out after ${perModelTimeoutMs}ms`)),
+            perModelTimeoutMs
+          );
         });
         
         const promptPromise = prompt(input, { model: candidate });
@@ -124,8 +164,14 @@ const generateHintFlow = ai.defineFlow(
         
         // Check for common errors that should trigger fallback
         const notFound = /not found/i.test(msg) || /NOT_FOUND/.test(msg);
-        const authError = /401|Incorrect API key|Invalid API key|authentication/i.test(msg);
+        const authError = /401|403|Incorrect API key|Invalid API key|authentication|forbidden|denied access/i.test(msg);
         const rateLimitError = /429|rate limit|quota/i.test(msg);
+        const providerUnavailable = /timed out|ECONN|fetch failed|network/i.test(msg);
+
+        if (provider && (authError || providerUnavailable)) {
+          // Don't waste time retrying same provider across multiple model IDs.
+          blockedProviders.add(provider);
+        }
         
         if (notFound || authError || rateLimitError) {
           console.warn(`[generateHintFlow] model "${candidate}" failed: ${msg} — trying next`);
@@ -185,6 +231,39 @@ function buildDeterministicHint(input: GenerateHintInput): GenerateHintOutput {
     chosenLetters,
     hint,
   };
+}
+
+function getProviderFromModel(modelId: string): string | null {
+  if (modelId.startsWith('openai/deepseek-')) return 'deepseek';
+  if (modelId.startsWith('openai/')) return 'openai-compat';
+  if (modelId.startsWith('googleai/')) return 'googleai';
+  return null;
+}
+
+function sanitizeModelCandidate(value: string | undefined | null): string {
+  const model = (value || '').trim().replace(/^['"]|['"]$/g, '');
+  if (!model) return '';
+
+  if (/^googleai\/gemini-2\.0-flash-exp$/i.test(model)) {
+    return '';
+  }
+  if (model.startsWith('openai/') && !model.startsWith('openai/deepseek-')) {
+    return '';
+  }
+
+  return model;
+}
+
+function isModelAllowedForConfiguredProviders(
+  modelId: string,
+  hasDeepSeekKey: boolean,
+  hasGoogleAIKey: boolean
+): boolean {
+  if (!modelId) return false;
+  if (modelId.startsWith('openai/deepseek-')) return hasDeepSeekKey;
+  if (modelId.startsWith('openai/')) return false;
+  if (modelId.startsWith('googleai/')) return hasGoogleAIKey;
+  return true;
 }
 
 // Validation function to ensure the hint follows the rules

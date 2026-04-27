@@ -219,12 +219,16 @@ export async function generateUniqueWord(params: {
       };
       
     } catch (error: any) {
-      console.error(`[generateUniqueWord] Attempt ${attempt + 1} error:`, error.message);
-      
-      // Continue to next attempt
-      if (attempt < maxAttempts - 1) {
-        continue;
+      const message = error?.message || String(error);
+      console.error(`[generateUniqueWord] Attempt ${attempt + 1} error:`, message);
+
+      if (shouldAbortAiRetries(message)) {
+        console.warn('[generateUniqueWord] Aborting additional AI attempts due to provider/config failure; using fallback now.');
+        break;
       }
+
+      // Continue to next attempt
+      if (attempt < maxAttempts - 1) continue;
     }
   }
   
@@ -239,6 +243,14 @@ export async function generateUniqueWord(params: {
     word: fallback.word,
     definition: fallback.definition,
   };
+}
+
+function shouldAbortAiRetries(message: string): boolean {
+  // If the model orchestration already failed across candidates,
+  // repeating the same call 4 more times usually only burns time.
+  return /AI model request failed|No usable AI model candidates|quota|429|authentication|invalid api key|forbidden|denied access|not found for API version/i.test(
+    message.toLowerCase()
+  );
 }
 
 /**

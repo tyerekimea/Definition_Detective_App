@@ -4,8 +4,8 @@
   "webDir": "out",
   "bundledWebRuntime": false,
   "server": {
-    "url": "http://localhost:3000",
-    "cleartext": true,
+    "url": "https://traylapps.com",
+    "cleartext": false,
     "androidScheme": "https"
   },
   "plugins": {

@@ -9,6 +9,7 @@
     "dev": "next dev --webpack --port 3000 --hostname 0.0.0.0",
     "build": "MOBILE_BUILD=false next build --webpack",
     "build:mobile": "rm -rf out .next && MOBILE_BUILD=true next build --webpack && npx cap sync",
+    "build:mobile:prod": "rm -rf out .next && MOBILE_BUILD=true NODE_ENV=production next build --webpack && cp capacitor.config.prod.json capacitor.config.json && npx cap sync",
     "start": "next start",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "lint:next": "next lint",

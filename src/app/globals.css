@@ -9,6 +9,7 @@ body {
 
 @layer base {
   :root {
+    --font-literata: 'Georgia';
     --background: 0 0% 94.1%; /* Light Gray */
     --foreground: 210 29% 24%; /* Midnight Blue */
     --card: 0 0% 100%;

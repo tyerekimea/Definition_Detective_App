@@ -1,0 +1,12 @@
+// Provide flutter object for Flutter plugin compatibility
+gradle.allprojects { project ->
+    project.ext {
+        flutter = [
+            compileSdkVersion: 36,
+            minSdkVersion: 24,
+            targetSdkVersion: 36,
+            versionCode: 1,
+            versionName: '1.0'
+        ]
+    }
+}

@@ -1,0 +1,330 @@
+
+'use server';
+
+import { ai } from '@/ai/genkit';
+import {
+  GenerateHintInput,
+  GenerateHintOutput,
+  GenerateHintInputSchema,
+  GenerateHintOutputSchema,
+} from '@/ai/schemas/hint';
+
+export async function generateHint(input: GenerateHintInput): Promise<GenerateHintOutput> {
+  return generateHintFlow(input);
+}
+
+const prompt = ai.definePrompt({
+  name: 'generateHintPrompt',
+  input: { schema: GenerateHintInputSchema },
+  output: { schema: GenerateHintOutputSchema, format: 'json' },
+  prompt: `You are a hint generator for a word puzzle game.
+
+WORD: "{{word}}"
+WORD LENGTH: {{wordLength}} characters
+FORBIDDEN LETTERS: "{{incorrectGuesses}}"
+UNIQUE LETTERS TO REVEAL: {{lettersToReveal}}
+
+CRITICAL RULES:
+1. Choose EXACTLY {{lettersToReveal}} UNIQUE letter(s) from the word (not {{incorrectGuesses}})
+2. When you reveal a letter, show ALL its occurrences
+3. Replace all other positions with "_"
+4. The hint MUST be EXACTLY {{wordLength}} characters long
+
+ALGORITHM:
+1. List all unique letters in "{{word}}" that are NOT in "{{incorrectGuesses}}"
+2. Select EXACTLY {{lettersToReveal}} letters from that list
+3. For each of the {{wordLength}} positions in "{{word}}":
+   - If word[i] is in your selected letters: hint[i] = word[i]
+   - Otherwise: hint[i] = "_"
+4. Verify: hint.length === {{wordLength}} and unique_letters_in_hint === {{lettersToReveal}}
+
+EXAMPLE:
+Word: "example", Length: 7, Forbidden: "xyz", Reveal: 2
+Available: [e, a, m, p, l]
+Select: [e, a]
+Position 0: 'e' → in selection → 'e'
+Position 1: 'x' → not in selection → '_'
+Position 2: 'a' → in selection → 'a'
+Position 3: 'm' → not in selection → '_'
+Position 4: 'p' → not in selection → '_'
+Position 5: 'l' → not in selection → '_'
+Position 6: 'e' → in selection → 'e'
+Result: "e_a___e" (length 7, unique letters: 2) ✓
+
+NOW SOLVE:
+Word: "{{word}}"
+Length: {{wordLength}}
+Forbidden: "{{incorrectGuesses}}"
+Reveal: {{lettersToReveal}}
+
+Return JSON:
+- reasoning: explain which {{lettersToReveal}} letters you chose
+- chosenLetters: array of EXACTLY {{lettersToReveal}} letters
+- hint: string of EXACTLY {{wordLength}} characters`,
+});
+
+const generateHintFlow = ai.defineFlow(
+  {
+    name: 'generateHintFlow',
+    inputSchema: GenerateHintInputSchema,
+    outputSchema: GenerateHintOutputSchema,
+  },
+  async input => {
+    const hasDeepSeekKey = Boolean(process.env.DEEPSEEK_API_KEY?.trim());
+    const hasGoogleAIKey = Boolean(
+      process.env.GEMINI_API_KEY?.trim() || process.env.GOOGLE_GENAI_API_KEY?.trim()
+    );
+    const perModelTimeoutMs = Math.max(1500, Number(process.env.HINT_MODEL_TIMEOUT_MS || 9000));
+    const totalFlowTimeoutMs = Math.max(
+      perModelTimeoutMs,
+      Number(process.env.HINT_FLOW_TIMEOUT_MS || 25000)
+    );
+
+    // Build prioritized candidate list:
+    // 1) explicit `GOOGLE_GENAI_MODEL`
+    // 2) comma-separated `GOOGLE_GENAI_MODEL_CANDIDATES`
+    // 3) sensible defaults (try common model ids)
+    const explicit = sanitizeModelCandidate(process.env.GOOGLE_GENAI_MODEL);
+    const listFromEnv = (process.env.GOOGLE_GENAI_MODEL_CANDIDATES || '')
+      .split(',')
+      .map(s => sanitizeModelCandidate(s))
+      .filter(Boolean);
+    const defaultCandidates = [
+      ...(hasDeepSeekKey
+        ? [
+            // DeepSeek models (through OpenAI-compatible endpoint)
+            'openai/deepseek-chat',
+            'openai/deepseek-reasoner',
+          ]
+        : []),
+      ...(hasGoogleAIKey
+        ? [
+            // Gemini models - fallback
+            'googleai/gemini-2.5-flash', // Fast, stable
+            'googleai/gemini-2.5-pro', // Higher quality
+            'googleai/gemini-2.5-flash-lite', // Lowest cost
+          ]
+        : []),
+    ];
+    const candidates = Array.from(new Set([
+      ...(explicit ? [explicit] : []),
+      ...listFromEnv,
+      ...defaultCandidates,
+    ])).filter((candidate) =>
+      isModelAllowedForConfiguredProviders(candidate, hasDeepSeekKey, hasGoogleAIKey)
+    );
+
+    if (candidates.length === 0) {
+      console.warn('[generateHintFlow] No AI providers configured; using deterministic fallback.');
+      return buildDeterministicHint(input);
+    }
+
+    let lastErr: any = null;
+    const modelErrors: string[] = [];
+    const blockedProviders = new Set<string>();
+    const startedAt = Date.now();
+    for (const candidate of candidates) {
+      if (Date.now() - startedAt > totalFlowTimeoutMs) {
+        lastErr = new Error(`Hint flow timeout exceeded (${totalFlowTimeoutMs}ms)`);
+        break;
+      }
+
+      const provider = getProviderFromModel(candidate);
+      if (provider && blockedProviders.has(provider)) {
+        continue;
+      }
+
+      try {
+        console.debug('[generateHintFlow] trying model candidate:', candidate);
+        
+        // Add timeout to prevent hanging
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(
+            () => reject(new Error(`Model request timed out after ${perModelTimeoutMs}ms`)),
+            perModelTimeoutMs
+          );
+        });
+        
+        const promptPromise = prompt(input, { model: candidate });
+        const { output } = await Promise.race([promptPromise, timeoutPromise]) as any;
+        
+        if (!output) {
+          lastErr = new Error('AI returned no output.');
+          continue;
+        }
+        console.debug('[generateHintFlow] model worked:', candidate);
+        
+        // Validate and fix the output
+        const validatedOutput = validateAndFixHint(input, output);
+        return validatedOutput;
+      } catch (err: any) {
+        lastErr = err;
+        const msg = err?.originalMessage ?? err?.message ?? String(err);
+        modelErrors.push(`${candidate}: ${msg}`);
+        
+        // Check for common errors that should trigger fallback
+        const notFound = /not found/i.test(msg) || /NOT_FOUND/.test(msg);
+        const authError = /401|403|Incorrect API key|Invalid API key|authentication|forbidden|denied access/i.test(msg);
+        const rateLimitError = /429|rate limit|quota/i.test(msg);
+        const providerUnavailable = /timed out|ECONN|fetch failed|network/i.test(msg);
+
+        if (provider && (authError || providerUnavailable)) {
+          // Don't waste time retrying same provider across multiple model IDs.
+          blockedProviders.add(provider);
+        }
+        
+        if (notFound || authError || rateLimitError) {
+          console.warn(`[generateHintFlow] model "${candidate}" failed: ${msg} — trying next`);
+          continue;
+        }
+        
+        // For other errors, also try next model (more resilient)
+        console.warn(`[generateHintFlow] model "${candidate}" error: ${msg} — trying next`);
+        continue;
+      }
+    }
+
+    // If we get here, all models failed. Fall back to deterministic local hint
+    // so gameplay remains available even during provider outages or permission issues.
+    const fallback = buildDeterministicHint(input);
+    const tried = candidates.join(', ');
+    const finalMsg = lastErr?.originalMessage ?? lastErr?.message ?? String(lastErr ?? 'no response');
+    console.warn(
+      `[generateHintFlow] All AI models failed; using deterministic fallback. Tried: [${tried}]. Last error: ${finalMsg}. Errors: ${modelErrors.join(' | ')}`
+    );
+    return fallback;
+  }
+);
+
+function buildDeterministicHint(input: GenerateHintInput): GenerateHintOutput {
+  const wordChars = input.word.split('');
+  const forbidden = new Set(
+    (input.incorrectGuesses || '')
+      .toLowerCase()
+      .split('')
+      .filter(Boolean)
+  );
+
+  const availableUnique: string[] = [];
+  const seen = new Set<string>();
+  for (const char of wordChars) {
+    const lower = char.toLowerCase();
+    if (forbidden.has(lower)) continue;
+    if (seen.has(lower)) continue;
+    seen.add(lower);
+    availableUnique.push(lower);
+  }
+
+  const targetCount = Math.max(1, input.lettersToReveal);
+  const chosenLetters = availableUnique.slice(0, targetCount);
+  const chosenSet = new Set(chosenLetters);
+
+  const hint = wordChars
+    .map((char) => (chosenSet.has(char.toLowerCase()) ? char : '_'))
+    .join('');
+
+  return {
+    reasoning:
+      chosenLetters.length > 0
+        ? `Fallback hint selected ${chosenLetters.length} safe unique letter(s): ${chosenLetters.join(', ')}.`
+        : 'Fallback hint could not reveal letters because all available letters are blocked by incorrect guesses.',
+    chosenLetters,
+    hint,
+  };
+}
+
+function getProviderFromModel(modelId: string): string | null {
+  if (modelId.startsWith('openai/deepseek-')) return 'deepseek';
+  if (modelId.startsWith('openai/')) return 'openai-compat';
+  if (modelId.startsWith('googleai/')) return 'googleai';
+  return null;
+}
+
+function sanitizeModelCandidate(value: string | undefined | null): string {
+  const model = (value || '').trim().replace(/^['"]|['"]$/g, '');
+  if (!model) return '';
+
+  if (/^googleai\/gemini-2\.0-flash-exp$/i.test(model)) {
+    return '';
+  }
+  if (model.startsWith('openai/') && !model.startsWith('openai/deepseek-')) {
+    return '';
+  }
+
+  return model;
+}
+
+function isModelAllowedForConfiguredProviders(
+  modelId: string,
+  hasDeepSeekKey: boolean,
+  hasGoogleAIKey: boolean
+): boolean {
+  if (!modelId) return false;
+  if (modelId.startsWith('openai/deepseek-')) return hasDeepSeekKey;
+  if (modelId.startsWith('openai/')) return false;
+  if (modelId.startsWith('googleai/')) return hasGoogleAIKey;
+  return true;
+}
+
+// Validation function to ensure the hint follows the rules
+function validateAndFixHint(
+  input: GenerateHintInput,
+  output: GenerateHintOutput
+): GenerateHintOutput {
+  const { word, wordLength, incorrectGuesses, lettersToReveal } = input;
+  let { hint, reasoning, chosenLetters } = output;
+
+  // Fix 1: Ensure hint length matches word length
+  if (hint.length !== wordLength) {
+    console.warn(`[validateHint] Hint length mismatch: ${hint.length} !== ${wordLength}. Fixing...`);
+    hint = hint.slice(0, wordLength).padEnd(wordLength, '_');
+  }
+
+  // Fix 2: Ensure only chosen letters are revealed
+  if (chosenLetters && chosenLetters.length > 0) {
+    const chosenSet = new Set(chosenLetters.map(l => l.toLowerCase()));
+    const fixedHint = word.split('').map((char) => {
+      const lowerChar = char.toLowerCase();
+      if (chosenSet.has(lowerChar)) {
+        return char;
+      }
+      return '_';
+    }).join('');
+    
+    if (fixedHint !== hint) {
+      console.warn(`[validateHint] Fixed hint to match chosen letters. Before: "${hint}", After: "${fixedHint}"`);
+      hint = fixedHint;
+    }
+  }
+
+  // Fix 3: Ensure we're not revealing forbidden letters
+  const forbiddenSet = new Set(incorrectGuesses.toLowerCase().split(''));
+  const revealedLetters = new Set(
+    hint.split('').filter(c => c !== '_').map(c => c.toLowerCase())
+  );
+  
+  const hasForbidden = Array.from(revealedLetters).some(l => forbiddenSet.has(l));
+  if (hasForbidden) {
+    console.warn(`[validateHint] Hint contains forbidden letters. Regenerating...`);
+    // Remove forbidden letters from hint
+    hint = word.split('').map((char, i) => {
+      if (hint[i] !== '_' && !forbiddenSet.has(char.toLowerCase())) {
+        return char;
+      }
+      return '_';
+    }).join('');
+  }
+
+  // Fix 4: Ensure correct number of unique letters
+  const uniqueRevealed = new Set(hint.split('').filter(c => c !== '_').map(c => c.toLowerCase()));
+  if (uniqueRevealed.size !== lettersToReveal) {
+    console.warn(`[validateHint] Wrong number of unique letters: ${uniqueRevealed.size} !== ${lettersToReveal}`);
+    // This is harder to fix automatically, but we'll log it
+  }
+
+  return {
+    hint,
+    reasoning,
+    chosenLetters,
+  };
+}

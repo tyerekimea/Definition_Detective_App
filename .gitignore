@@ -48,6 +48,11 @@ yarn-error.log*
 
 #openai
 openai_key
+
+# Large binary files
+*.apk
+*.keystore
+playstore-assets/**/*.png
 .vercel
 .env.vercel
 definition-detective.keystore

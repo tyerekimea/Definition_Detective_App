@@ -15,12 +15,22 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        release {
+            storeFile file (getProperty("MY_STORE_FILE"))
+            storePassword getProperty("MY_STORE_PASSWORD")
+            keyAlias getProperty("MY_KEY_ALIAS")
+            keyPassword getProperty("MY_KEY_PASSWORD")
+        }
+    }
+
     buildTypes {
         debug {
             shrinkResources false
             minifyEnabled false
         }
         release {
+            signingConfig signingConfigs.release
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
@@ -43,12 +53,19 @@ dependencies {
     implementation fileTree(include: ["*.jar"], dir: "libs")
     implementation "androidx.appcompat:appcompat:1.7.1"
     implementation "androidx.coordinatorlayout:coordinatorlayout:1.3.0"
+    implementation project(':capacitor-android')
     implementation "androidx.core:core-splashscreen:1.2.0"
     testImplementation "junit:junit:4.13.2"
     androidTestImplementation "androidx.test.ext:junit:1.3.0"
     androidTestImplementation "androidx.test.espresso:espresso-core:3.7.0"
 }
 
-flutter {
-    source = "../.."
+// To confirm that the signing properties are being read correctly, you can run the following command in the terminal:
+task printSigningProps {
+    doLast {
+        println ">>> MY_STORE_FILE = ${project.findProperty("MY_STORE_FILE")}"
+        println ">>> MY_STORE_PASSWORD = ${project.findProperty("MY_STORE_PASSWORD")}"
+        println ">>> MY_KEY_ALIAS = ${project.findProperty("MY_KEY_ALIAS")}"
+        println ">>> MY_KEY_PASSWORD = ${project.findProperty("MY_KEY_PASSWORD")}"
+    }
 }

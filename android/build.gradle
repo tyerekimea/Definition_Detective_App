@@ -22,6 +22,32 @@ subprojects {
     layout.buildDirectory.set(rootProject.layout.buildDirectory.dir(name))
 }
 
+// Configure all Android library plugins immediately when applied
+subprojects { proj ->
+    proj.plugins.withId('com.android.library') {
+        // Create flutter extension for compatibility
+        try {
+            proj.android.extensions.create('flutter')
+            proj.android.flutter.minSdk = 24
+            proj.android.flutter.targetSdk = 36
+            proj.android.flutter.compileSdk = 36
+        } catch (Exception e) {
+            // Already configured or not applicable
+        }
+        
+        // Ensure required Android SDK settings
+        if (!proj.android.compileSdkVersion) {
+            proj.android.compileSdk = 36
+        }
+    }
+    
+    proj.plugins.withId('com.android.application') {
+        if (!proj.android.compileSdkVersion) {
+            proj.android.compileSdk = 36
+        }
+    }
+}
+
 allprojects {
     repositories {
         google()
@@ -57,6 +83,20 @@ project(':capacitor-android') {
         tasks.withType(JavaCompile).configureEach {
             sourceCompatibility = "17"
             targetCompatibility = "17"
+        }
+    }
+}
+
+// Pre-configure Flutter extension for all library projects to avoid missing property errors
+subprojects { proj ->
+    afterEvaluate {
+        if (proj.plugins.hasPlugin('com.android.library')) {
+            proj.android {
+                compileSdk = 36
+                if (!hasProperty('compileSdkVersion')) {
+                    ext.compileSdkVersion = 36
+                }
+            }
         }
     }
 }

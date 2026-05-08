@@ -1,5 +1,5 @@
 package com.definitiondetective.app;
 
-import io.flutter.embedding.android.FlutterActivity;
+import com.getcapacitor.BridgeActivity;
 
-public class MainActivity extends FlutterActivity {}
+public class MainActivity extends BridgeActivity {}

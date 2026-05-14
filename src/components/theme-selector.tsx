@@ -37,11 +37,14 @@ export function ThemeSelector({
 }: ThemeSelectorProps) {
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
 
+  // Ensure selectedTheme is valid, default to 'current' if not
+  const validTheme = (selectedTheme && selectedTheme in WORD_THEMES) ? selectedTheme : 'current';
+
   const handleThemeSelect = (value: string) => {
     const theme = value as WordTheme;
     const themeInfo = WORD_THEMES[theme];
 
-    if (themeInfo.premium && !isPremium) {
+    if (themeInfo && themeInfo.premium && !isPremium) {
       setShowUpgradeDialog(true);
       return;
     }
@@ -53,12 +56,12 @@ export function ThemeSelector({
     <>
       <div className="flex flex-col gap-2">
         {!compact && <label className="text-sm font-medium">Word Theme</label>}
-        <Select value={selectedTheme} onValueChange={handleThemeSelect}>
+        <Select value={validTheme} onValueChange={handleThemeSelect}>
           <SelectTrigger className={compact ? "h-8 w-full text-xs" : "w-full"}>
             <SelectValue>
               <div className="flex items-center gap-2">
-                <span>{WORD_THEMES[selectedTheme].icon}</span>
-                <span>{WORD_THEMES[selectedTheme].name}</span>
+                <span>{WORD_THEMES[validTheme]?.icon || '📚'}</span>
+                <span>{WORD_THEMES[validTheme]?.name || 'Current Theme'}</span>
               </div>
             </SelectValue>
           </SelectTrigger>
@@ -80,7 +83,7 @@ export function ThemeSelector({
         </Select>
         {!compact && (
           <p className="text-xs text-muted-foreground">
-            {WORD_THEMES[selectedTheme].description}
+            {WORD_THEMES[validTheme]?.description || 'General vocabulary'}
           </p>
         )}
       </div>

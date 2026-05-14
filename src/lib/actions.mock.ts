@@ -27,5 +27,5 @@ export async function updateUserTheme(params: { userId: string; theme: WordTheme
 
 export async function getUserTheme(userId: string | null): Promise<{ theme: WordTheme; isPremium: boolean }> {
   console.warn('[Mobile] Theme retrieval not available in offline mode');
-  return { theme: 'default' as WordTheme, isPremium: false };
+  return { theme: 'current' as WordTheme, isPremium: false };
 }

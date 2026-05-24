@@ -2,8 +2,9 @@ import { config } from 'dotenv';
 config({ path: '.env.local' });
 
 import './src/ai/genkit';
-import { generateWord } from './src/ai/flows/generate-word-flow';
-import { generateHint } from './src/ai/flows/generate-hints';
+// Use server flow modules directly so this debug runner bypasses mock wrappers.
+import { generateWord } from './src/ai/flows/generate-word-flow.server';
+import { generateHint } from './src/ai/flows/generate-hints.server';
 
 async function debugFlows() {
   console.log('🔍 DEBUGGING WORD FLOW AND HINT GENERATION\n');
@@ -11,8 +12,8 @@ async function debugFlows() {
   
   // Check environment
   console.log('\n📋 ENVIRONMENT CHECK:');
-  console.log(`   OpenAI API Key: ${process.env.OPENAI_API_KEY ? '✅ Set (' + process.env.OPENAI_API_KEY.substring(0, 10) + '...)' : '❌ Not set'}`);
-  console.log(`   Gemini API Key: ${process.env.GEMINI_API_KEY ? '✅ Set' : '❌ Not set'}`);
+  console.log(`   DeepSeek API Key: ${process.env.DEEPSEEK_API_KEY ? '✅ Set' : '❌ Not set'}`);
+  console.log(`   Gemini API Key: ${process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY ? '✅ Set' : '❌ Not set'}`);
   console.log(`   Model Override: ${process.env.GOOGLE_GENAI_MODEL || 'None (using defaults)'}`);
   console.log(`   Model Candidates: ${process.env.GOOGLE_GENAI_MODEL_CANDIDATES || 'None (using defaults)'}`);
   

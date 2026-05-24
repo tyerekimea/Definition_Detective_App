@@ -6,6 +6,16 @@ import type { WordTheme } from '@/lib/game-data';
 import { wordList } from '@/lib/game-data';
 import { THEME_FALLBACK_WORDS } from '@/lib/word-utils';
 
+function assertMobileBuildOnly(functionName: string): void {
+  if (process.env.MOBILE_BUILD === 'true') return;
+
+  // Fail loudly in non-mobile contexts so we don't silently run offline mocks
+  // when the server-action wiring is expected to be active.
+  throw new Error(
+    `[MockGuard] ${functionName} called while MOBILE_BUILD is not true. This indicates server-action aliasing/import routing is incorrect for web/dev runtime.`
+  );
+}
+
 // Build a local word pool from the existing offline data
 function getOfflineWord(params: {
   difficulty: 'easy' | 'medium' | 'hard';
@@ -37,6 +47,7 @@ function getOfflineWord(params: {
 export async function useHintAction(
   data: GenerateHintInput & { userId?: string | null; isFree?: boolean }
 ): Promise<{ success: boolean; message?: string; hint?: string }> {
+  assertMobileBuildOnly('useHintAction');
   console.warn('[Mobile] Hint action not available in offline mode');
   return { success: false, message: 'Hints not available in offline mode' };
 }
@@ -48,6 +59,7 @@ export async function generateWordWithTheme(params: {
   level?: number;
   previousWord?: string;
 }): Promise<{ success: boolean; word?: string; definition?: string; message?: string }> {
+  assertMobileBuildOnly('generateWordWithTheme');
   const entry = getOfflineWord(params);
 
   if (!entry) {
@@ -62,6 +74,7 @@ export async function updateUserTheme(params: {
   userId: string;
   theme: WordTheme;
 }): Promise<{ success: boolean; message?: string }> {
+  assertMobileBuildOnly('updateUserTheme');
   console.warn('[Mobile] Theme update not available in offline mode');
   return { success: false, message: 'Theme update not available offline' };
 }
@@ -69,6 +82,55 @@ export async function updateUserTheme(params: {
 export async function getUserTheme(
   userId: string | null
 ): Promise<{ theme: WordTheme; isPremium: boolean }> {
+  assertMobileBuildOnly('getUserTheme');
   // Silently return default — no warning needed, this is expected offline behaviour
   return { theme: 'current' as WordTheme, isPremium: false };
+}
+
+// Batch initialization not available in offline mode
+export async function initializeLevelWithBatch(params: {
+  level: number;
+  theme?: WordTheme;
+  userId?: string | null;
+  preloadCount?: number;
+}): Promise<{ success: boolean; words?: any[]; message?: string }> {
+  assertMobileBuildOnly('initializeLevelWithBatch');
+  console.warn('[Mobile] Level batch initialization not available in offline mode');
+  return { success: false, message: 'Batch initialization not available offline' };
+}
+
+// Background preloading not available in offline mode
+export async function preloadNextWordsInBackground(params: {
+  level: number;
+  theme?: WordTheme;
+  userId?: string | null;
+  count?: number;
+}): Promise<{ success: boolean; words?: any[] }> {
+  assertMobileBuildOnly('preloadNextWordsInBackground');
+  console.warn('[Mobile] Background preloading not available in offline mode');
+  return { success: false };
+}
+
+// Performance metrics not available in offline mode
+export async function getGenerationMetrics(): Promise<{
+  success: boolean;
+  metrics?: any;
+  message?: string;
+}> {
+  assertMobileBuildOnly('getGenerationMetrics');
+  console.warn('[Mobile] Performance metrics not available in offline mode');
+  return { success: false, message: 'Metrics not available offline' };
+}
+
+// Batch hints not available in offline mode
+export async function generateBatchHintsAction(params: {
+  hints: Array<{
+    word: string;
+    incorrectGuesses: string;
+    lettersToReveal: number;
+  }>;
+}): Promise<{ success: boolean; hints?: any[]; message?: string }> {
+  assertMobileBuildOnly('generateBatchHintsAction');
+  console.warn('[Mobile] Batch hint generation not available in offline mode');
+  return { success: false, message: 'Batch hints not available offline' };
 }

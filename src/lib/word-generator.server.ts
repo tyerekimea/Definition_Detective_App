@@ -1,6 +1,6 @@
 'use server';
 
-import { generateWord as aiGenerateWord } from '@/ai/flows/generate-word-flow';
+import { generateWord as aiGenerateWord } from '@/ai/flows/generate-word-flow.server';
 import { getFirestore, FieldValue } from '@/lib/firebase-admin';
 import {
   levelToConstraints,
@@ -248,7 +248,7 @@ export async function generateUniqueWord(params: {
 function shouldAbortAiRetries(message: string): boolean {
   // If the model orchestration already failed across candidates,
   // repeating the same call 4 more times usually only burns time.
-  return /AI model request failed|No usable AI model candidates|quota|429|authentication|invalid api key|forbidden|denied access|not found for API version/i.test(
+  return /AI model request failed|No usable AI model candidates|quota|429|authentication|invalid api key|forbidden|denied access|not found for API version|insufficient balance|out of credit/i.test(
     message.toLowerCase()
   );
 }
@@ -260,10 +260,12 @@ export async function clearUserWordHistory(userId: string): Promise<{ success: b
   try {
     const firestore = getFirestore();
     const userProfileRef = firestore.collection('userProfiles').doc(userId);
-    
+    const usedWordsRef = userProfileRef.collection('usedWords');
+
     await userProfileRef.update({
       usedWords: [],
     });
+    await pruneUsedWordsCollection(usedWordsRef, 0); // Purge all
     
     return { success: true };
   } catch (error) {

@@ -1,2 +1,2 @@
 // Wrapper module that conditionally exports mock or server implementations
-export * from '@/lib/admin-actions.mock';
+export * from './generate-batch-hint-flow.server';

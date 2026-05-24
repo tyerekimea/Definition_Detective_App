@@ -92,7 +92,7 @@ const generateHintFlow = ai.defineFlow(
     const defaultCandidates = [
       ...(hasDeepSeekKey
         ? [
-            // DeepSeek models (through OpenAI-compatible endpoint)
+            // DeepSeek models - primary choice
             'openai/deepseek-chat',
             'openai/deepseek-reasoner',
           ]
@@ -100,9 +100,9 @@ const generateHintFlow = ai.defineFlow(
       ...(hasGoogleAIKey
         ? [
             // Gemini models - fallback
-            'googleai/gemini-2.5-flash', // Fast, stable
-            'googleai/gemini-2.5-pro', // Higher quality
-            'googleai/gemini-2.5-flash-lite', // Lowest cost
+            'googleai/gemini-2.5-flash-lite',
+            'googleai/gemini-2.5-flash',
+            'googleai/gemini-2.5-pro',
           ]
         : []),
     ];
@@ -166,7 +166,7 @@ const generateHintFlow = ai.defineFlow(
         const notFound = /not found/i.test(msg) || /NOT_FOUND/.test(msg);
         const authError = /401|403|Incorrect API key|Invalid API key|authentication|forbidden|denied access/i.test(msg);
         const rateLimitError = /429|rate limit|quota/i.test(msg);
-        const providerUnavailable = /timed out|ECONN|fetch failed|network/i.test(msg);
+        const providerUnavailable = /ECONN|fetch failed|network/i.test(msg);
 
         if (provider && (authError || providerUnavailable)) {
           // Don't waste time retrying same provider across multiple model IDs.
@@ -234,6 +234,7 @@ function buildDeterministicHint(input: GenerateHintInput): GenerateHintOutput {
 }
 
 function getProviderFromModel(modelId: string): string | null {
+  if (modelId.startsWith('deepseek-')) return 'deepseek';
   if (modelId.startsWith('openai/deepseek-')) return 'deepseek';
   if (modelId.startsWith('openai/')) return 'openai-compat';
   if (modelId.startsWith('googleai/')) return 'googleai';
@@ -247,7 +248,7 @@ function sanitizeModelCandidate(value: string | undefined | null): string {
   if (/^googleai\/gemini-2\.0-flash-exp$/i.test(model)) {
     return '';
   }
-  if (model.startsWith('openai/') && !model.startsWith('openai/deepseek-')) {
+  if (model.startsWith('openai/') && !model.startsWith('openai/deepseek-') && model !== 'deepseek-chat' && model !== 'deepseek-reasoner') {
     return '';
   }
 
@@ -260,6 +261,7 @@ function isModelAllowedForConfiguredProviders(
   hasGoogleAIKey: boolean
 ): boolean {
   if (!modelId) return false;
+  if (modelId.startsWith('deepseek-')) return hasDeepSeekKey;
   if (modelId.startsWith('openai/deepseek-')) return hasDeepSeekKey;
   if (modelId.startsWith('openai/')) return false;
   if (modelId.startsWith('googleai/')) return hasGoogleAIKey;

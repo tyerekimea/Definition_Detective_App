@@ -1,41 +1,34 @@
-
 'use server';
 
 import { ai } from '../genkit';
 import {
-  type GenerateWordInput,
-  type GenerateWordOutput,
-  GenerateWordInputSchema,
-  GenerateWordOutputSchema,
-} from '../schemas/word';
+  type BatchGenerateWordInput,
+  type BatchGenerateWordOutput,
+  BatchGenerateWordInputSchema,
+  BatchGenerateWordOutputSchema,
+} from '../schemas/batch-word';
 
-export async function generateWord(
-  input: GenerateWordInput
-): Promise<GenerateWordOutput> {
-  // Convert excludeWords array to comma-separated string for the prompt
+export async function generateBatchWords(
+  input: BatchGenerateWordInput
+): Promise<BatchGenerateWordOutput> {
   const processedInput = {
     ...input,
     excludeWordsString: input.excludeWords?.join(', ') || '',
   };
-  return generateWordFlow(processedInput as any);
+  return generateBatchWordFlow(processedInput as any);
 }
 
 const prompt = ai.definePrompt({
-  name: 'generateWordPrompt',
-  input: { schema: GenerateWordInputSchema },
-  output: { schema: GenerateWordOutputSchema, format: 'json' },
+  name: 'generateBatchWordsPrompt',
+  input: { schema: BatchGenerateWordInputSchema },
+  output: { schema: BatchGenerateWordOutputSchema, format: 'json' },
   prompt: `You are an expert lexicographer and puzzle master for a word game.
 
-Your task is to generate a single word and its corresponding definition based on the requested difficulty level and theme.
+Your task is to generate {{{batchSize}}} unique words and their definitions based on the requested difficulty level and theme.
 
+Batch Size: {{{batchSize}}}
 Difficulty: {{{difficulty}}}
 Theme: {{{theme}}}
-{{#if minLen}}
-Minimum letters: {{{minLen}}}
-{{/if}}
-{{#if maxLen}}
-Maximum letters: {{{maxLen}}}
-{{/if}}
 
 Theme Guidelines:
 - current: General vocabulary EXCLUDING science, history, and geography topics. Focus on: everyday objects, emotions, actions, abstract concepts, arts, literature, business, technology, food, sports, entertainment, and general knowledge. DO NOT use scientific terms, historical terms, or geographical terms.
@@ -48,75 +41,58 @@ IMPORTANT: Do NOT use any of these words (user has already seen them): {{{exclud
 {{/if}}
 
 Difficulty Guidelines:
-- For "easy": Use common words most people know
-- For "medium": Use moderately challenging words
-- For "hard": Use advanced vocabulary words
+- For "easy": Use common words (5-7 letters) that most people know
+- For "medium": Use moderately challenging words (7-10 letters)
+- For "hard": Use advanced vocabulary words (10+ letters)
 
 Requirements:
-- The word MUST relate to the theme specified above
-- If theme is not "current", choose a technical noun clearly tied to the theme (avoid emotions, virtues, or generic abstract nouns)
-- The definition should be clear, concise, and dictionary-style
-- Ensure the word is appropriate for the difficulty level
-- If minimum/maximum letters are provided, the word MUST satisfy those length limits
+- Generate EXACTLY {{{batchSize}}} different words
+- All words MUST relate to the theme specified above
+- If theme is not "current", choose technical nouns clearly tied to the theme (avoid emotions, virtues, or generic abstract nouns)
+- Each definition should be clear, concise, and dictionary-style
+- Ensure each word is appropriate for the difficulty level
 - Use only single words (no spaces, no hyphens)
+- Words in the batch MUST be unique from each other
 
 Return a JSON object with:
-- word: the target word (lowercase, no spaces, single word only)
-- definition: a clear, concise definition`,
+- words: array of objects, each containing:
+  - word: the target word (lowercase, no spaces, single word only)
+  - definition: a clear, concise definition
+- generatedCount: number of words in the array
+- totalRequested: {{{batchSize}}}`,
 });
 
-const generateWordFlow = ai.defineFlow(
+const generateBatchWordFlow = ai.defineFlow(
   {
-    name: 'generateWordFlow',
-    inputSchema: GenerateWordInputSchema,
-    outputSchema: GenerateWordOutputSchema,
+    name: 'generateBatchWordFlow',
+    inputSchema: BatchGenerateWordInputSchema,
+    outputSchema: BatchGenerateWordOutputSchema,
   },
   async input => {
     const hasDeepSeekKey = Boolean(process.env.DEEPSEEK_API_KEY?.trim());
     const hasGoogleAIKey = Boolean(
       process.env.GEMINI_API_KEY?.trim() || process.env.GOOGLE_GENAI_API_KEY?.trim()
     );
-    const perModelTimeoutMs = Math.max(1500, Number(process.env.WORD_MODEL_TIMEOUT_MS || 9000));
+    const perModelTimeoutMs = Math.max(2000, Number(process.env.WORD_MODEL_TIMEOUT_MS || 12000));
     const totalFlowTimeoutMs = Math.max(
       perModelTimeoutMs,
-      Number(process.env.WORD_FLOW_TIMEOUT_MS || 25000)
+      Number(process.env.WORD_FLOW_TIMEOUT_MS || 35000)
     );
 
-    // Build prioritized candidate list:
-    // 1) explicit `GOOGLE_GENAI_MODEL`
-    // 2) comma-separated `GOOGLE_GENAI_MODEL_CANDIDATES`
-    // 3) sensible defaults (try common model ids)
-    const explicitRaw = process.env.GOOGLE_GENAI_MODEL;
-    const explicit = sanitizeModelCandidate(explicitRaw);
-    const listRaw = (process.env.GOOGLE_GENAI_MODEL_CANDIDATES || '')
+    const explicit = sanitizeModelCandidate(process.env.GOOGLE_GENAI_MODEL);
+    const listFromEnv = (process.env.GOOGLE_GENAI_MODEL_CANDIDATES || '')
       .split(',')
-      .map(s => s.trim())
-      .filter(Boolean);
-    const listFromEnv = listRaw
       .map(s => sanitizeModelCandidate(s))
       .filter(Boolean);
-    if (explicitRaw && !explicit) {
-      console.warn(
-        `[generateWordFlow] Ignoring unsupported GOOGLE_GENAI_MODEL value: "${explicitRaw}".`
-      );
-    }
-    if (listRaw.length > 0 && listFromEnv.length !== listRaw.length) {
-      const invalidCandidates = listRaw.filter(candidate => !sanitizeModelCandidate(candidate));
-      console.warn(
-        `[generateWordFlow] Ignoring unsupported model candidates: ${invalidCandidates.join(', ')}`
-      );
-    }
     const defaultCandidates = [
       ...(hasDeepSeekKey
         ? [
-            // DeepSeek models - primary choice
             'openai/deepseek-chat',
             'openai/deepseek-reasoner',
           ]
         : []),
       ...(hasGoogleAIKey
         ? [
-            // Gemini models - fallback
             'googleai/gemini-2.5-flash-lite',
             'googleai/gemini-2.5-flash',
             'googleai/gemini-2.5-pro',
@@ -137,12 +113,12 @@ const generateWordFlow = ai.defineFlow(
     const startedAt = Date.now();
 
     if (candidates.length === 0) {
-      throw new Error('No usable AI model candidates are configured for generateWordFlow.');
+      throw new Error('No usable AI model candidates are configured for generateBatchWordFlow.');
     }
 
     for (const candidate of candidates) {
       if (Date.now() - startedAt > totalFlowTimeoutMs) {
-        lastErr = new Error(`Word flow timeout exceeded (${totalFlowTimeoutMs}ms)`);
+        lastErr = new Error(`Batch word flow timeout exceeded (${totalFlowTimeoutMs}ms)`);
         break;
       }
 
@@ -152,9 +128,8 @@ const generateWordFlow = ai.defineFlow(
       }
 
       try {
-        console.log('[generateWordFlow] trying model candidate:', candidate);
+        console.debug('[generateBatchWordFlow] trying model candidate:', candidate);
         
-        // Add timeout to prevent hanging
         const timeoutPromise = new Promise((_, reject) => {
           setTimeout(
             () => reject(new Error(`Model request timed out after ${perModelTimeoutMs}ms`)),
@@ -169,14 +144,13 @@ const generateWordFlow = ai.defineFlow(
           lastErr = new Error('AI returned no output.');
           continue;
         }
-        console.log('[generateWordFlow] model worked:', candidate);
+        console.debug('[generateBatchWordFlow] model worked:', candidate);
         return output;
       } catch (err: any) {
         const msg = err?.originalMessage ?? err?.message ?? String(err);
         lastErr = err;
         modelErrors.push(`${candidate}: ${msg}`);
         
-        // Check for common errors that should trigger fallback
         const notFound = /not found/i.test(msg) || /NOT_FOUND/.test(msg);
         const authError = /401|403|Incorrect API key|Invalid API key|authentication|forbidden|denied access/i.test(msg);
         const rateLimitError = /429|rate limit|quota/i.test(msg);
@@ -187,17 +161,15 @@ const generateWordFlow = ai.defineFlow(
         }
         
         if (notFound || authError || rateLimitError) {
-          console.warn(`[generateWordFlow] model "${candidate}" failed: ${msg} — trying next`);
+          console.warn(`[generateBatchWordFlow] model "${candidate}" failed: ${msg} — trying next`);
           continue;
         }
         
-        // For other errors, also try next model (more resilient)
-        console.warn(`[generateWordFlow] model "${candidate}" error: ${msg} — trying next`);
+        console.warn(`[generateBatchWordFlow] model "${candidate}" error: ${msg} — trying next`);
         continue;
       }
     }
 
-    // If we reach here, none of the candidates worked.
     const tried = candidates.join(', ');
     const finalMsg = lastErr?.originalMessage ?? lastErr?.message ?? String(lastErr ?? 'no response');
     throw new Error(
@@ -210,12 +182,9 @@ function sanitizeModelCandidate(value: string | undefined | null): string {
   const model = (value || '').trim().replace(/^['"]|['"]$/g, '');
   if (!model) return '';
 
-  // Known legacy/unsupported IDs for current generateContent usage.
   if (/^googleai\/gemini-2\.0-flash-exp$/i.test(model)) {
     return '';
   }
-  // Drop non-DeepSeek OpenAI model IDs. DeepSeek models are OpenAI-compatible
-  // but use `openai/deepseek-*` model names.
   if (model.startsWith('openai/') && !model.startsWith('openai/deepseek-')) {
     return '';
   }
@@ -223,21 +192,20 @@ function sanitizeModelCandidate(value: string | undefined | null): string {
   return model;
 }
 
-function getProviderFromModel(modelId: string): string | null {
-  if (modelId.startsWith('deepseek-')) return 'deepseek';
-  if (modelId.startsWith('openai/')) return 'openai-compat';
-  if (modelId.startsWith('googleai/')) return 'googleai';
+function getProviderFromModel(model: string): string | null {
+  if (model.startsWith('openai/')) return 'openai';
+  if (model.startsWith('googleai/')) return 'googleai';
   return null;
 }
 
 function isModelAllowedForConfiguredProviders(
-  modelId: string,
-  hasDeepSeekKey: boolean,
-  hasGoogleAIKey: boolean
+  model: string,
+  hasDeepSeek: boolean,
+  hasGoogleAI: boolean
 ): boolean {
-  if (!modelId) return false;
-  if (modelId.startsWith('openai/deepseek-')) return hasDeepSeekKey;
-  if (modelId.startsWith('openai/')) return false;
-  if (modelId.startsWith('googleai/')) return hasGoogleAIKey;
-  return true;
+  const provider = getProviderFromModel(model);
+  if (!provider) return false;
+  if (provider === 'openai') return hasDeepSeek;
+  if (provider === 'googleai') return hasGoogleAI;
+  return false;
 }

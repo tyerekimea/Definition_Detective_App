@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useTransition, useRef } from
 import Link from "next/link";
 import { type WordData, type WordTheme, getRankForScore, wordList } from "@/lib/game-data";
 import { generateImageDescription } from "@/ai/flows/generate-image-description-flow";
-import { useHintAction as hintAction, generateWordWithTheme, updateUserTheme, getUserTheme } from "@/lib/actions";
+import { useHintAction as hintAction, generateWordWithTheme, updateUserTheme, getUserTheme } from "@/lib/actions.server";
 import { THEME_FALLBACK_WORDS } from "@/lib/word-utils";
 import { ThemeSelector } from "@/components/theme-selector";
 import { Button } from "@/components/ui/button";

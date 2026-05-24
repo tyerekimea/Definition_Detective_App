@@ -6,7 +6,7 @@
     "node": ">=22.22.2"
   },
   "scripts": {
-    "dev": "next dev --webpack --port 3000 --hostname 0.0.0.0",
+    "dev": "MOBILE_BUILD=false next dev --webpack --port 3000 --hostname 0.0.0.0",
     "build": "MOBILE_BUILD=false next build --webpack",
     "build:mobile": "rm -rf out .next && MOBILE_BUILD=true PAYSTACK_SECRET_KEY=stub FIREBASE_PRIVATE_KEY=stub FIREBASE_PROJECT_ID=stub FIREBASE_CLIENT_EMAIL=stub next build --webpack && npx cap sync",
     "build:mobile:prod": "rm -rf out .next && MOBILE_BUILD=true NODE_ENV=production PAYSTACK_SECRET_KEY=stub FIREBASE_PRIVATE_KEY=stub FIREBASE_PROJECT_ID=stub FIREBASE_CLIENT_EMAIL=stub next build --webpack && cp capacitor.config.prod.json capacitor.config.json && npx cap sync",

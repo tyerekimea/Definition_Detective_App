@@ -2,8 +2,7 @@
 'use server';
 
 import { getFirestore } from '@/lib/firebase-admin';
-import { generateHint } from '@/ai/flows/generate-hints';
-import { generateWord } from '@/ai/flows/generate-word-flow';
+import { generateHint } from '@/ai/flows/generate-hints.server';
 import type { GenerateHintInput } from '@/ai/schemas/hint';
 import type { WordTheme } from '@/lib/game-data';
 import { hasPremiumAccess } from '@/lib/subscription';
@@ -79,7 +78,7 @@ export async function useHintAction(data: GenerateHintInput & { userId?: string 
 }
 
 // Generate word with theme and exclude used words
-// Now uses the robust word generator with fallback
+// Uses the optimized single-call generator for real-time gameplay
 export async function generateWordWithTheme(params: {
   difficulty: 'easy' | 'medium' | 'hard';
   theme?: WordTheme;
@@ -87,10 +86,10 @@ export async function generateWordWithTheme(params: {
   level?: number;
   previousWord?: string;
 }): Promise<{ success: boolean; word?: string; definition?: string; message?: string }> {
-  // Import the robust generator
-  const { generateUniqueWord } = await import('./word-generator');
-  
   try {
+    // Import the optimized generator
+    const { generateOptimizedWord } = await import('./optimized-word-generator.server');
+    
     // Use level-based constraints if level provided, otherwise map difficulty
     const level = params.level || (
       params.difficulty === 'easy' ? 3 :
@@ -98,14 +97,19 @@ export async function generateWordWithTheme(params: {
       20
     );
     
-    console.log('[generateWordWithTheme] Generating word for level:', level);
+    console.log('[generateWordWithTheme] Generating word for level:', level, 'theme:', params.theme);
     
-    const result = await generateUniqueWord({
+    const result = await generateOptimizedWord({
       level,
-      theme: params.theme,
+      theme: (params.theme as any) || 'current',
       userId: params.userId,
       previousWord: params.previousWord,
     });
+
+    console.log(
+      '[generateWordWithTheme] Generation result:',
+      result.success ? `success word=${result.word ?? 'n/a'}` : `failed message=${result.message ?? 'n/a'}`
+    );
     
     return result;
   } catch (error: any) {
@@ -198,5 +202,168 @@ export async function getUserTheme(userId: string): Promise<{ theme: WordTheme; 
   } catch (error: any) {
     console.error('Error in getUserTheme:', error);
     return { theme: 'current', isPremium: false };
+  }
+}
+
+// Initialize a level with batch-preloaded words for smooth gameplay
+// Generates 5-10 words upfront during level start
+export async function initializeLevelWithBatch(params: {
+  level: number;
+  theme?: WordTheme;
+  userId?: string | null;
+  preloadCount?: number;
+}): Promise<{ success: boolean; words?: Array<{ word: string; definition: string }>; message?: string; performanceMs?: number }> {
+  try {
+    const { generateBatchUniqueWords } = await import('./batch-word-generator.server');
+    
+    const count = Math.min(params.preloadCount || 8, 10); // Max 10 per batch
+    console.log('[initializeLevelWithBatch] Preloading', count, 'words for level', params.level);
+    
+    const result = await generateBatchUniqueWords({
+      batchSize: count,
+      level: params.level,
+      theme: (params.theme as any) || 'current',
+      userId: params.userId,
+    });
+    
+    if (result.success && result.words) {
+      console.log('[initializeLevelWithBatch] Successfully preloaded', result.generatedCount, 'words in', result.performanceMs, 'ms');
+      return {
+        success: true,
+        words: result.words,
+        performanceMs: result.performanceMs,
+      };
+    }
+    
+    return {
+      success: false,
+      message: result.message || 'Failed to preload words',
+    };
+  } catch (error: any) {
+    console.error('Error in initializeLevelWithBatch:', error);
+    return {
+      success: false,
+      message: error.message || 'Failed to initialize level',
+    };
+  }
+}
+
+// Background preloading function - call this while player is active
+// Returns preloaded words to queue for smoother gameplay
+export async function preloadNextWordsInBackground(params: {
+  level: number;
+  theme?: WordTheme;
+  userId?: string | null;
+  count?: number;
+}): Promise<{ success: boolean; words?: Array<{ word: string; definition: string }>; performanceMs?: number }> {
+  try {
+    const { generateBatchUniqueWords } = await import('./batch-word-generator.server');
+    
+    const count = Math.min(params.count || 3, 5); // Smaller batch for background
+    
+    const result = await generateBatchUniqueWords({
+      batchSize: count,
+      level: params.level,
+      theme: (params.theme as any) || 'current',
+      userId: params.userId,
+    });
+    
+    if (result.success && result.words) {
+      console.log('[preloadNextWordsInBackground] Preloaded', result.generatedCount, 'words');
+      return {
+        success: true,
+        words: result.words,
+        performanceMs: result.performanceMs,
+      };
+    }
+    
+    return {
+      success: false,
+    };
+  } catch (error: any) {
+    console.warn('[preloadNextWordsInBackground] Background preload failed (non-critical):', error.message);
+    return {
+      success: false,
+    };
+  }
+}
+
+// Get performance metrics for AI generation (for optimization monitoring)
+export async function getGenerationMetrics(): Promise<{
+  success: boolean;
+  metrics?: {
+    timestamp: number;
+    averageSingleCallMs: number;
+    averageBatchMs: number;
+    totalGenerations: number;
+    successRate: number;
+  };
+  message?: string;
+}> {
+  try {
+    const { getPerformanceReport } = await import('./batch-word-generator.server');
+    
+    const report = await getPerformanceReport();
+    
+    return {
+      success: true,
+      metrics: {
+        timestamp: Date.now(),
+        averageSingleCallMs: report.totalSingleCall,
+        averageBatchMs: report.totalBatch,
+        totalGenerations: report.metricsCount,
+        successRate: report.successRate,
+      },
+    };
+  } catch (error: any) {
+    console.error('Error getting generation metrics:', error);
+    return {
+      success: false,
+      message: error.message || 'Failed to get metrics',
+    };
+  }
+}
+
+// Generate batch hints for multiplayer or rapid hint requests
+export async function generateBatchHintsAction(params: {
+  hints: Array<{
+    word: string;
+    incorrectGuesses: string;
+    lettersToReveal: number;
+  }>;
+}): Promise<{ success: boolean; hints?: any[]; message?: string; performanceMs?: number }> {
+  try {
+    const { generateBatchHintsOptimized } = await import('./batch-word-generator.server');
+    
+    const hintRequests = params.hints.map((h) => ({
+      word: h.word,
+      wordLength: h.word.length,
+      incorrectGuesses: h.incorrectGuesses,
+      lettersToReveal: h.lettersToReveal,
+    }));
+    
+    const result = await generateBatchHintsOptimized({
+      hints: hintRequests,
+    });
+    
+    if (result.success && result.hints) {
+      console.log('[generateBatchHintsAction] Generated', result.generatedCount, 'hints in', result.performanceMs, 'ms');
+      return {
+        success: true,
+        hints: result.hints,
+        performanceMs: result.performanceMs,
+      };
+    }
+    
+    return {
+      success: false,
+      message: result.message || 'Failed to generate hints',
+    };
+  } catch (error: any) {
+    console.error('Error in generateBatchHintsAction:', error);
+    return {
+      success: false,
+      message: error.message || 'Failed to generate batch hints',
+    };
   }
 }

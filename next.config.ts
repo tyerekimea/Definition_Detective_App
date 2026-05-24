@@ -81,6 +81,12 @@ const nextConfig: NextConfig = {
         '@/ai/flows/generate-image-description-flow.mock': path.resolve(__dirname, 'src/ai/flows/generate-image-description-flow.server.ts'),
       };
     } else {
+      // For mobile builds, map explicit server-action imports back to mocks.
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        '@/lib/actions.server$': path.resolve(__dirname, 'src/lib/actions.mock.ts'),
+      };
+
       // For mobile builds, exclude API routes
       config.module.rules.push({
         test: /src\/app\/api/,

@@ -16,6 +16,18 @@ export const GenerateWordInputSchema = z.object({
     .string()
     .optional()
     .describe('Comma-separated list of words to exclude (prompt helper).'),
+  minLen: z
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .describe('Optional minimum allowed word length.'),
+  maxLen: z
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .describe('Optional maximum allowed word length.'),
 });
 export type GenerateWordInput = z.infer<typeof GenerateWordInputSchema>;
 

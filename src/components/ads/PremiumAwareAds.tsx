@@ -1,6 +1,6 @@
 'use client';
 
-import Script from 'next/script';
+import { useEffect } from 'react';
 import { doc } from 'firebase/firestore';
 import AdsterraBannerAd from '@/components/ads/AdsterraBannerAd';
 import { useAuth } from '@/hooks/use-auth';
@@ -23,6 +23,21 @@ export default function PremiumAwareAds() {
 
   const isPremium = hasPremiumAccess(userProfile);
 
+  useEffect(() => {
+    if (authLoading || (user && profileLoading) || isPremium) return;
+
+    const existing = document.querySelector<HTMLScriptElement>(
+      `script[src="${ADSENSE_AUTO_ADS_SRC}"]`
+    );
+    if (existing) return;
+
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = ADSENSE_AUTO_ADS_SRC;
+    script.crossOrigin = 'anonymous';
+    document.head.appendChild(script);
+  }, [authLoading, profileLoading, isPremium, user]);
+
   // Avoid showing ads to premium users while auth/profile state is still loading.
   if (authLoading || (user && profileLoading)) {
     return null;
@@ -34,7 +49,6 @@ export default function PremiumAwareAds() {
 
   return (
     <>
-      <Script async src={ADSENSE_AUTO_ADS_SRC} crossOrigin="anonymous" strategy="afterInteractive" />
       <AdsterraBannerAd />
     </>
   );

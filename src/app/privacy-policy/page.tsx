@@ -185,7 +185,7 @@ export default function PrivacyPolicyPage() {
         }}>
           <strong style={{ color: '#673AB7', display: 'block' }}>📧 Email:</strong> support@traylapps.com<br />
           <strong style={{ color: '#673AB7', display: 'block', marginTop: '10px' }}>🌐 Website:</strong> <a href="https://traylapps.com" target="_blank" rel="noopener noreferrer" style={{ color: '#673AB7', textDecoration: 'none', borderBottom: '1px solid #673AB7' }}>https://traylapps.com</a><br />
-          <strong style={{ color: '#673AB7', display: 'block', marginTop: '10px' }}>📱 In-App Support:</strong> Settings > Help & Support
+          <strong style={{ color: '#673AB7', display: 'block', marginTop: '10px' }}>📱 In-App Support:</strong> Settings &gt; Help &amp; Support
         </div>
 
         <div style={{

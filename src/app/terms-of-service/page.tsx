@@ -171,7 +171,7 @@ export default function TermsOfServicePage() {
           <strong style={{ color: '#673AB7', display: 'block' }}>Definition Detective</strong>
           📧 Email: support@traylapps.com<br />
           🌐 Website: <a href="https://traylapps.com" target="_blank" rel="noopener noreferrer" style={{ color: '#673AB7', textDecoration: 'none', borderBottom: '1px solid #673AB7' }}>https://traylapps.com</a><br />
-          📱 In-App: Settings > Help & Support
+          📱 In-App: Settings &gt; Help &amp; Support
         </div>
 
         <h2 style={{ color: '#673AB7', marginTop: '30px', marginBottom: '15px', fontSize: '1.5em', borderBottom: '2px solid #673AB7', paddingBottom: '10px' }}>

@@ -49,6 +49,10 @@ const nextConfig: NextConfig = {
       unoptimized: true,
     },
     trailingSlash: true,
+    experimental: {
+      // Disable server actions for mobile static export
+      serverActions: false,
+    },
   }),
   // Server actions only for web builds
   ...(!isMobileBuild && {
@@ -79,12 +83,23 @@ const nextConfig: NextConfig = {
         '@/ai/flows/generate-word-flow.mock': path.resolve(__dirname, 'src/ai/flows/generate-word-flow.server.ts'),
         '@/ai/flows/game-sounds-flow.mock': path.resolve(__dirname, 'src/ai/flows/game-sounds-flow.server.ts'),
         '@/ai/flows/generate-image-description-flow.mock': path.resolve(__dirname, 'src/ai/flows/generate-image-description-flow.server.ts'),
+        '@/ai/flows/generate-batch-hint-flow.mock': path.resolve(__dirname, 'src/ai/flows/generate-batch-hint-flow.server.ts'),
+        '@/ai/flows/generate-batch-word-flow.mock': path.resolve(__dirname, 'src/ai/flows/generate-batch-word-flow.server.ts'),
       };
     } else {
-      // For mobile builds, map explicit server-action imports back to mocks.
+      // For mobile builds, strictly map all potential server imports to mocks
+      // to prevent 'use server' from leaking into the static export.
       config.resolve.alias = {
         ...config.resolve.alias,
         '@/lib/actions.server$': path.resolve(__dirname, 'src/lib/actions.mock.ts'),
+        '@/lib/admin-actions.server$': path.resolve(__dirname, 'src/lib/admin-actions.mock.ts'),
+        '@/lib/word-generator.server$': path.resolve(__dirname, 'src/lib/word-generator.mock.ts'),
+        '@/ai/flows/generate-hints.server$': path.resolve(__dirname, 'src/ai/flows/generate-hints.mock.ts'),
+        '@/ai/flows/generate-word-flow.server$': path.resolve(__dirname, 'src/ai/flows/generate-word-flow.mock.ts'),
+        '@/ai/flows/game-sounds-flow.server$': path.resolve(__dirname, 'src/ai/flows/game-sounds-flow.mock.ts'),
+        '@/ai/flows/generate-image-description-flow.server$': path.resolve(__dirname, 'src/ai/flows/generate-image-description-flow.mock.ts'),
+        '@/ai/flows/generate-batch-hint-flow.server$': path.resolve(__dirname, 'src/ai/flows/generate-batch-hint-flow.mock.ts'),
+        '@/ai/flows/generate-batch-word-flow.server$': path.resolve(__dirname, 'src/ai/flows/generate-batch-word-flow.mock.ts'),
       };
 
       // For mobile builds, exclude API routes

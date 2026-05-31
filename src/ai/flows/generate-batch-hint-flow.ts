@@ -1,2 +1,2 @@
 // Wrapper module that conditionally exports mock or server implementations
-export * from './generate-batch-hint-flow.server';
+export * from '@/ai/flows/generate-batch-hint-flow.mock';

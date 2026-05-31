@@ -254,7 +254,7 @@ const THEME_WORD_SETS: Record<string, Set<string>> = Object.fromEntries(
   Object.entries(THEME_FALLBACK_WORDS).map(([theme, pools]) => [
     theme,
     new Set(
-      [...pools.easy, ...pools.medium, ...pools.hard].map(item => item.word)
+      Object.values(pools).flat().map(item => normalizeWord(item.word))
     ),
   ])
 );
@@ -270,7 +270,7 @@ export function isThemeMatch(word: string, definition: string, theme?: string): 
   if (wordSet?.has(normalizedWord)) return true;
 
   const keywords = THEME_KEYWORDS[theme];
-  if (!keywords || keywords.length === 0) return true;
+  if (!keywords || keywords.length === 0) return wordSet?.has(normalizedWord) ?? false;
 
   if (keywords.some(keyword => normalizedWord.includes(keyword))) return true;
   return keywords.some(keyword => normalizedDefinition.includes(keyword));
@@ -281,28 +281,32 @@ export function getFallbackWord(
   usedWords: Set<string>,
   theme: string = 'current'
 ): { word: string; definition: string } {
+  const difficulty = constraints.difficulty;
   const themeKey = THEME_FALLBACK_WORDS[theme] ? theme : 'current';
-  const poolByTheme = THEME_FALLBACK_WORDS[themeKey];
-  const pool = poolByTheme[constraints.difficulty] || THEME_FALLBACK_WORDS.current.easy;
+  const themePools = THEME_FALLBACK_WORDS[themeKey];
+  
+  // 1. Try to find an unused word in the requested theme and difficulty
+  const pool = themePools[difficulty] || THEME_FALLBACK_WORDS.current[difficulty];
+  const unusedMatches = pool.filter(item => 
+    !usedWords.has(normalizeWord(item.word)) && isValidWord(item.word, constraints)
+  );
+  if (unusedMatches.length > 0) return unusedMatches[Math.floor(Math.random() * unusedMatches.length)];
 
-  const validUnused = pool.filter(item => (
-    !usedWords.has(item.word.toLowerCase()) && isValidWord(item.word, constraints)
-  ));
-  if (validUnused.length > 0) {
-    return validUnused[0];
-  }
+  // 2. Try any word in the requested pool (repeats allowed) that matches constraints
+  const anyMatches = pool.filter(item => isValidWord(item.word, constraints));
+  if (anyMatches.length > 0) return anyMatches[Math.floor(Math.random() * anyMatches.length)];
 
-  const validAny = pool.filter(item => isValidWord(item.word, constraints));
-  if (validAny.length > 0) {
-    const randomIndex = Math.floor(Math.random() * validAny.length);
-    return validAny[randomIndex];
-  }
+  // 3. Fallback to the "current" theme's difficulty pool for unused words
+  const currentPool = THEME_FALLBACK_WORDS.current[difficulty];
+  const currentUnusedMatches = currentPool.filter(item => 
+    !usedWords.has(normalizeWord(item.word)) && isValidWord(item.word, constraints)
+  );
+  if (currentUnusedMatches.length > 0) return currentUnusedMatches[Math.floor(Math.random() * currentUnusedMatches.length)];
 
-  const currentPool = THEME_FALLBACK_WORDS.current[constraints.difficulty] || [];
-  const firstUnused = currentPool.find(item => !usedWords.has(item.word.toLowerCase()));
-  if (firstUnused) return firstUnused;
+  // 4. Try current pool any match
+  const currentAnyMatches = currentPool.filter(item => isValidWord(item.word, constraints));
+  if (currentAnyMatches.length > 0) return currentAnyMatches[Math.floor(Math.random() * currentAnyMatches.length)];
 
-  const fallbackPool = currentPool.length > 0 ? currentPool : pool;
-  const randomIndex = Math.floor(Math.random() * fallbackPool.length);
-  return fallbackPool[randomIndex];
+  // 5. Hard fallback to the absolute first word in the system (guaranteed safety)
+  return THEME_FALLBACK_WORDS.current.easy[0];
 }

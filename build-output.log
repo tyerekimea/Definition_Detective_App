@@ -1,0 +1,16 @@
+
+> definition-detective@0.1.0 build:mobile:prod
+> rm -rf out .next && MOBILE_BUILD=true NODE_ENV=production PAYSTACK_SECRET_KEY=stub FIREBASE_PRIVATE_KEY=stub FIREBASE_PROJECT_ID=stub FIREBASE_CLIENT_EMAIL=stub next build --webpack && cp capacitor.config.prod.json capacitor.config.json && npx cap sync
+
+⚠ Specified "headers" will not automatically work with "output: export". See more info here: https://nextjs.org/docs/messages/export-no-custom-routes
+▲ Next.js 16.2.3 (webpack)
+- Environments: .env.local, .env.production
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 75s
+  Running TypeScript ...
+  Finished TypeScript in 31.0s ...
+  Collecting page data using 3 workers ...
+
+> Server Actions are not supported with static export.
+Read more: https://nextjs.org/docs/app/building-your-application/deploying/static-exports#unsupported-features

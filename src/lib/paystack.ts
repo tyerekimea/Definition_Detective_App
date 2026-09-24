@@ -1,37 +1,45 @@
 import axios from 'axios';
+import type { AxiosInstance } from 'axios';
 
-const RAW_PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY ?? '';
-const PAYSTACK_SECRET_KEY = RAW_PAYSTACK_SECRET_KEY
-  .replace(/[\r\n]/g, '')
-  .trim()
-  .replace(/^['"]|['"]$/g, '');
-
-if (
-  RAW_PAYSTACK_SECRET_KEY !== PAYSTACK_SECRET_KEY &&
-  process.env.NODE_ENV !== 'production'
-) {
-  console.warn(
-    'PAYSTACK_SECRET_KEY contained extra whitespace/quotes or line breaks and was sanitized at runtime.'
-  );
-}
-
-if (!PAYSTACK_SECRET_KEY) {
-  throw new Error('PAYSTACK_SECRET_KEY is missing or empty');
-}
-
-if (/[\x00-\x1F\x7F]/.test(PAYSTACK_SECRET_KEY)) {
-  throw new Error('PAYSTACK_SECRET_KEY contains invalid control characters');
-}
 const PAYSTACK_BASE_URL = 'https://api.paystack.co';
 
-// Paystack API client
-const paystackClient = axios.create({
-  baseURL: PAYSTACK_BASE_URL,
-  headers: {
-    Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
-    'Content-Type': 'application/json',
-  },
-});
+let cachedClient: AxiosInstance | null = null;
+
+// ✅ Key is read, sanitized, and validated only when a Paystack function is
+// actually called — not at import time. This means `next build` (and any
+// route that merely imports this file) no longer crashes on machines/CI
+// runs that don't have PAYSTACK_SECRET_KEY set (e.g. local dev, since it's
+// a production-only secret that lives in Vercel).
+function getPaystackClient(): AxiosInstance {
+  if (cachedClient) return cachedClient;
+
+  const raw = process.env.PAYSTACK_SECRET_KEY ?? '';
+  const key = raw.replace(/[\r\n]/g, '').trim().replace(/^['"]|['"]$/g, '');
+
+  if (raw !== key && process.env.NODE_ENV !== 'production') {
+    console.warn(
+      'PAYSTACK_SECRET_KEY contained extra whitespace/quotes or line breaks and was sanitized at runtime.'
+    );
+  }
+
+  if (!key) {
+    throw new Error('PAYSTACK_SECRET_KEY is missing or empty');
+  }
+
+  if (/[\x00-\x1F\x7F]/.test(key)) {
+    throw new Error('PAYSTACK_SECRET_KEY contains invalid control characters');
+  }
+
+  cachedClient = axios.create({
+    baseURL: PAYSTACK_BASE_URL,
+    headers: {
+      Authorization: `Bearer ${key}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  return cachedClient;
+}
 
 // Initialize transaction
 export async function initializeTransaction(data: {
@@ -42,7 +50,7 @@ export async function initializeTransaction(data: {
   callback_url?: string;
 }) {
   try {
-    const response = await paystackClient.post('/transaction/initialize', data);
+    const response = await getPaystackClient().post('/transaction/initialize', data);
     return response.data;
   } catch (error: any) {
     console.error('Paystack initialization error:', error.response?.data || error);
@@ -53,7 +61,7 @@ export async function initializeTransaction(data: {
 // Verify transaction
 export async function verifyTransaction(reference: string) {
   try {
-    const response = await paystackClient.get(`/transaction/verify/${reference}`);
+    const response = await getPaystackClient().get(`/transaction/verify/${reference}`);
     return response.data;
   } catch (error: any) {
     console.error('Paystack verification error:', error.response?.data || error);
@@ -69,7 +77,7 @@ export async function createPlan(data: {
   description?: string;
 }) {
   try {
-    const response = await paystackClient.post('/plan', data);
+    const response = await getPaystackClient().post('/plan', data);
     return response.data;
   } catch (error: any) {
     console.error('Paystack plan creation error:', error.response?.data || error);
@@ -84,7 +92,7 @@ export async function createSubscription(data: {
   authorization: string; // authorization code
 }) {
   try {
-    const response = await paystackClient.post('/subscription', data);
+    const response = await getPaystackClient().post('/subscription', data);
     return response.data;
   } catch (error: any) {
     console.error('Paystack subscription error:', error.response?.data || error);
@@ -95,7 +103,7 @@ export async function createSubscription(data: {
 // Cancel subscription
 export async function cancelSubscription(code: string, token: string) {
   try {
-    const response = await paystackClient.post('/subscription/disable', {
+    const response = await getPaystackClient().post('/subscription/disable', {
       code,
       token,
     });

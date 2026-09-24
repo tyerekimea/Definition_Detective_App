@@ -1,0 +1,77 @@
+# Archived docs
+
+One-off fix logs, debug sessions, and superseded guides from past
+development. Kept for history; none of these should be treated as
+current instructions — check /docs/ or the README for that.
+
+- **AD_INTEGRATION_SUMMARY.md** — 📊 Ad Integration Summary
+- **ADS_DEPLOYMENT_COMPLETE.md** — 🎉 Ads Successfully Integrated!
+- **ADSENSE_ADS_LIVE.md** — 🎉 AdSense Ads Are Now Live!
+- **ADSENSE_VERIFICATION_FIXED.md** — ✅ AdSense Verification Fixed!
+- **ADSENSE_WARNING_FIXED.md** — ✅ AdSense Warning Fixed!
+- **ADVERTISING_IMPLEMENTATION.md** — 🚀 Quick Advertising Implementation
+- **ADVERTISING_INTEGRATION_GUIDE.md** — 💰 Advertising Integration Guide for Definition Detective
+- **AI_FLOW_DEBUG_REPORT.md** — AI Flow Debugging Report - May 24, 2026
+- **AI_GENERATION_GUIDE.md** — AI Generation Implementation Guide
+- **AI_IMPLEMENTATION_SUMMARY.md** — Single-Call Generation & Batch Processing Implementation Summary
+- **AI_MODEL_FIX_SUMMARY.md** — AI Model Configuration Fix Summary
+- **ALL_FIXES_SUMMARY.md** — Complete Fixes Summary - Definition Detective
+- **ANDROID_TEST_GUIDE.md** — 📱 Android Device Testing Guide
+- **ANDROID_TESTING_SUMMARY.md** — 📱 Android Testing - Quick Summary
+- **BETTER_AD_STRATEGY.md** — 🎯 Better Ad Strategy for Your Game
+- **BUG_FIX_SUMMARY.md** — Bug Fix Summary
+- **BUILD_ERROR_FIX.md** — Build Error Fix - useSearchParams Suspense Boundary
+- **chat_2025_11_29_16_09_16.md** — (no summary line found)
+- **CLEAR_WORDS_NOW.md** — 🔧 Clear Your Word History NOW
+- **COMPLETE_BUG_FIX_REPORT.md** — Complete Bug Fix Report - Definition Detective
+- **CONNECT_DOMAIN_NOW.md** — ⚡ Connect traylapps.com RIGHT NOW (2 Minutes!)
+- **CONNECT_TRAYLAPPS_VERCEL.md** — 🚀 Connect traylapps.com to Your Project (Super Easy!)
+- **CREATE_ADSENSE_AD_UNITS.md** — 🎯 How to Create AdSense Ad Units (Fix 400 Error)
+- **CRITICAL_FIXES_IMPLEMENTED.md** — Critical Fixes Implementation Complete ✅
+- **CRITICAL_FIXES.md** — Critical Issues - FIXED ✅
+- **DEBUGGING_GUIDE.md** — Debugging Guide - Words and Hints Generation
+- **DEBUG_WORD_LOOP.md** — 🔍 Debug Word Loop Issue
+- **DEPLOY_ADS_NOW.md** — 🚀 Deploy Your Ads Now!
+- **DEPLOYMENT_SUMMARY.md** — 🚀 Deployment Summary - Definition Detective
+- **FIREBASE_ERROR_FIX.md** — Firebase Error Fix
+- **FIREBASE_VS_VERCEL_HOSTING.md** — 🔥 Firebase vs ⚡ Vercel Hosting - Complete Comparison
+- **FIX_PAYMENT_ERROR.md** — 🔧 Fix Payment "Invalid Field" Error
+- **GAME_FREEZE_FIX.md** — Game Freeze Fix - "You solved it" Hang
+- **GAME_PROGRESSION_DEBUG.md** — Game Progression Debugging Guide
+- **GAME_PROGRESSION_FIX.md** — Game Progression Fix
+- **HINT_ERROR_FIX.md** — Hint Error Fix - "Could not refresh access token"
+- **IMPLEMENTATION_COMPLETE.md** — AI Generation System - Implementation Complete ✅
+- **INTEGRATION_GUIDE.md** — AI Generation System Integration Guide
+- **MERGE_COMPLETE.md** — ✅ Merge Complete - All Bug Fixes Applied
+- **MOBILE_BUILD_NOTES.md** — Mobile Build - Important Notes
+- **MOBILE_BUILD_QUICK_START.md** — 🚀 Mobile Build - Quick Start
+- **MOBILE_BUILD_STATUS.md** — 📱 Mobile Build Status
+- **MOBILE_BUILD_SUMMARY.md** — Mobile Build - Complete Summary
+- **MOBILE_PRODUCTION_POSTFIX_REVIEW.md** — Mobile Production Readiness - POST-FIX REVIEW
+- **MOBILE_PRODUCTION_READINESS.md** — Mobile Production Readiness Review - Definition Detective
+- **MOBILE_QUICKSTART.md** — Mobile Build - Quick Start Guide
+- **MODEL_NAME_FIX.md** — Model Name Fix - Quick Update
+- **MONETAG_REMOVED.md** — ✅ Monetag Completely Removed - Now Using Google AdSense Only
+- **MONETIZATION_IMPLEMENTATION.md** — Monetization Implementation Guide
+- **MONETIZATION_STRATEGY.md** — Definition Detective - Monetization Strategy
+- **OPENAI_IMPLEMENTATION_COMPLETE.md** — ✅ OpenAI Implementation Complete
+- **OPENAI_SETUP.md** — OpenAI Integration Setup Guide
+- **OPENAI_WORD_GENERATION.md** — OpenAI Word Generation Configuration
+- **PAYMENT_FIX_GUIDE.md** — Payment Issue Fix - Comprehensive Guide
+- **PAYMENT_FIX_SUMMARY.md** — Payment Issue - Root Cause & Fix
+- **PAYMENT_NOT_REFLECTING_FIX.md** — 🔧 Fix: Payments Not Reflecting in App
+- **PLAYSTORE_ASSETS_READY.md** — 🎉 PlayStore Assets Package - COMPLETE!\n\n**Generated:** May 2, 2026  \n**Status:** ✅ **READY F
+- **PLAYSTORE_READINESS_DEBUG_REPORT.md** — 📱 PlayStore Submission Readiness - Comprehensive Debug Report
+- **PREMIUM_THEMES_PAYSTACK.md** — Premium Word Themes - Paystack Integration
+- **PRODUCTION_READINESS_REVIEW_APRIL_2026.md** — 📱 Definition Detective - Google Play Store Production Readiness Review
+- **QUICK_DOMAIN_SETUP.md** — ⚡ Quick Domain Setup - traylapps.com
+- **QUICK_REFERENCE.md** — Quick Reference: New AI Generation Functions
+- **QUICK_START.md** — Quick Start Guide - Definition Detective
+- **ROBUST_WORD_GENERATION.md** — 🎯 Robust Word Generation - Complete Overhaul
+- **SETUP_TRAYLAPPS_DOMAIN.md** — 🌐 Setup traylapps.com Domain on Vercel
+- **SIMPLE_FIX.md** — ✅ Simple Fix - Try This First
+- **SMART_HINTS_DEBUG_SUMMARY.md** — Smart Hints Generation - Debug Summary
+- **SUBSCRIPTION_FEATURES.md** — Subscription Features - User Experience
+- **WORD_GENERATION_FIXED.md** — ✅ Word Generation Fixed!
+- **WORD_THEMES_COMPLETE.md** — ✅ Word Themes & No-Repeat System - Implementation Complete
+- **WORD_THEMES_IMPLEMENTATION.md** — Word Themes & No-Repeat Implementation Plan
